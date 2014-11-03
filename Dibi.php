@@ -4,7 +4,7 @@
  * This file is part of framework Obo Development version (http://www.obophp.org/)
  * @link http://www.obophp.org/
  * @author Adam Suba, http://www.adamsuba.cz/
- * @copyright (c) 2011 - 2013 Adam Suba
+ * @copyright (c) 2011 - 2014 Adam Suba
  * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License, Version 2.0
  */
 
@@ -113,7 +113,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $primaryPropertyName = $entity->entityInformation()->primaryPropertyName;
         $primaryPropertyColumnName = $entity->informationForPropertyWithName($primaryPropertyName)->columnName;
         $query = "SELECT * FROM [{$tableName}] WHERE [{$tableName}].[{$primaryPropertyColumnName}] = %i LIMIT 1";
-        $data = $this->dibiConnection->fetchAll($query,$entity->$primaryPropertyName);
+        $data = $this->dibiConnection->fetchAll($query, $entity->primaryPropertyValue());
         return isset($data[0]) ? (array) $data[0] : array();
     }
 
@@ -158,7 +158,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function updateEntity(\obo\Entity $entity) {
         $primaryPropertyName = $entity->entityInformation()->primaryPropertyName;
         $primaryPropertyColumnName = $entity->informationForPropertyWithName($primaryPropertyName)->columnName;
-        $this->dibiConnection->query("UPDATE [{$entity->entityInformation()->repositoryName}] SET %a", $entity->entityInformation()->propertiesNamesToColumnsNames($entity->dataWhoNeedToStore($entity->entityInformation()->columnsNamesToPropertiesNames($entity->entityInformation()->repositoryColumns))), "WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = %i", $entity->$primaryPropertyName);
+        $this->dibiConnection->query("UPDATE [{$entity->entityInformation()->repositoryName}] SET %a", $entity->entityInformation()->propertiesNamesToColumnsNames($entity->dataWhoNeedToStore($entity->entityInformation()->columnsNamesToPropertiesNames($entity->entityInformation()->repositoryColumns))), "WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = %i", $entity->primaryPropertyValue());
     }
 
     /**
@@ -179,11 +179,11 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function createRelationshipBetweenEntities($repositoryName, array $entities) {
 
         if (\obo\obo::$developerMode) {
-            if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can not create repository with the name '{$repositoryName}' does not exist");
-            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can not be created, the expected two entities, you give " . \count($entities));
+            if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can not be created. Repository with the name '{$repositoryName}' does not exist.");
+            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can not be created. Two entities were expected but " . \count($entities) . " given.");
 
             foreach ($entities as $entity) {
-                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can not be created, the expected entities instance of \obo\Entity");
+                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can not be created. Entities must be of \obo\Entity instance");
             }
         }
 
@@ -200,10 +200,10 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         if (\obo\obo::$developerMode) {
             if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can not deleted repository with the name '{$repositoryName}' does not exist");
-            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can not be deleted, the expected two entities, you give " . \count($entities));
+            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can not be deleted. Two entities were expected but " . \count($entities) . " given. ");
 
             foreach ($entities as $entity) {
-                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can not be deleted, the expected entities instance of \obo\Entity");
+                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can not be deleted. Entities must be of \obo\Entity instance.");
             }
         }
 
@@ -224,7 +224,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
 
     /**
-     * @param type $defaultEntityClassName
+     * @param string $defaultEntityClassName
      * @param array $part
      * @param array $joins
      * @throws \obo\Exceptions\AutoJoinException
@@ -239,7 +239,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $ownerRepositoryName = $defaultEntityClassName::entityInformation()->repositoryName;
             $items = \explode("}.{", trim($block, "{}"));
 
-            if (count($items)>1) {
+            if (count($items) > 1) {
                 foreach ($items as $item) {
                     $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($item);
                     if (\is_null(($defaultPropertyInformation->relationship))) break;
@@ -251,17 +251,17 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     $defaultEntityInformation = $defaultEntityClassName::entityInformation();
                     $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
                     $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
-                    $entityToBeConnectInformation = $entityClassNameToBeConnected::entityInformation();
+                    $entityToBeConnectedInformation = $entityClassNameToBeConnected::entityInformation();
 
                     if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\One) {
 
                         $join = self::oneRelationshipJoinQuery(
-                                    $entityToBeConnectInformation->repositoryName,//$ownedRepositoryName
+                                    $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
                                     $joinKey,//$joinKey
                                     $ownerRepositoryName,//$ownerRepositoryName
                                     $defaultEntityInformation->propertiesInformation[$defaultPropertyInformation->relationship->ownerPropertyName]->columnName,//$foreignKeyColumnName
-                                    $entityClassNameToBeConnected::informationForPropertyWithName($entityToBeConnectInformation->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
-                                    $entityToBeConnectInformation->propertyNameForSoftDelete ? $entityToBeConnectInformation->informationForPropertyWithName($entityToBeConnectInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                    $entityClassNameToBeConnected::informationForPropertyWithName($entityToBeConnectedInformation->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
+                                    $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                 );
 
                     } elseif ($defaultPropertyInformation->relationship instanceof \obo\Relationships\Many) {
@@ -269,12 +269,12 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
                         if (\is_null($defaultPropertyInformation->relationship->connectViaRepositoryWithName)) {
 
                             $join = self::manyViaPropertyRelationshipJoinQuery(
-                                        $entityToBeConnectInformation->repositoryName,//$ownedRepositoryName
+                                        $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
                                         $joinKey,//$joinKey
                                         $ownerRepositoryName,//$ownerRepositoryName
-                                        $entityToBeConnectInformation->propertiesInformation[$defaultPropertyInformation->relationship->connectViaPropertyWithName]->columnName,//$foreignKeyColumnName
+                                        $entityToBeConnectedInformation->propertiesInformation[$defaultPropertyInformation->relationship->connectViaPropertyWithName]->columnName,//$foreignKeyColumnName
                                         $defaultEntityClassName::informationForPropertyWithName($defaultEntityInformation->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
-                                        $entityToBeConnectInformation->propertyNameForSoftDelete ? $entityToBeConnectInformation->informationForPropertyWithName($entityToBeConnectInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                        $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                     );
 
                             if (!\is_null($defaultPropertyInformation->relationship->ownerNameInProperty)) {
@@ -290,10 +290,10 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
                                         $joinKey,//$joinKey
                                         $defaultPropertyInformation->relationship->connectViaRepositoryWithName,//$connectViaRepositoryWithName
                                         $ownerRepositoryName,//$ownerRepositoryName
-                                        $entityToBeConnectInformation->repositoryName,//$ownedRepositoryName
+                                        $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
                                         $defaultEntityClassName::informationForPropertyWithName($defaultEntityInformation->primaryPropertyName)->columnName,//$ownerPrimaryPropertyColumnName
-                                        $entityClassNameToBeConnected::informationForPropertyWithName($entityToBeConnectInformation->primaryPropertyName)->columnName,//$ownedPrimaryPropertyColumnName
-                                        $entityToBeConnectInformation->propertyNameForSoftDelete ? $entityToBeConnectInformation->informationForPropertyWithName($entityToBeConnectInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                        $entityClassNameToBeConnected::informationForPropertyWithName($entityToBeConnectedInformation->primaryPropertyName)->columnName,//$ownedPrimaryPropertyColumnName
+                                        $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                     );
                         }
                     }
@@ -303,7 +303,6 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     $joins[$joinKey] = $join;
                 }
             } else {
-                $defaultEntityInformation = $defaultEntityClassName::entityInformation();
                 $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($items[0]);
             }
 
@@ -341,10 +340,10 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     }
 
     /**
-     * @param type $joinKey
-     * @param type $ownerNameInPropertyWithName
-     * @param type $ownerClassName
-     * @return type
+     * @param string $joinKey
+     * @param string $ownerNameInPropertyWithName
+     * @param string $ownerClassName
+     * @return string
      */
     protected static function manyViaPropertyRelationshipExtendsJoinQuery($joinKey, $ownerNameInPropertyWithName, $ownerClassName) {
         return " AND [{$joinKey}].[{$ownerNameInPropertyWithName}] = '{$ownerClassName}'";
