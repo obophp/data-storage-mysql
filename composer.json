@@ -1,0 +1,21 @@
+{
+    "name": "obo/data-storage-dibi",
+    "type": "library",
+    "description": "",
+    "keywords": ["framework", "domain logic", "orm", "database"],
+    "homepage": "http://obophp.org",
+    "license": ["Apache-2.0"],
+    "authors": [
+        {
+            "name": "Adam Šuba",
+            "homepage": "http://adamsuba.cz"
+        }
+    ],
+    "autoload": {
+        "classmap": [""]
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "obo/obo": "dev-master"
+    }
+}
