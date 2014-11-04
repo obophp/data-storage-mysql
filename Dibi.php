@@ -121,11 +121,8 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param \obo\Carriers\QueryCarrier $queryCarrier
      * @return array
      */
-    public function dataFromQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
-        $result = $this->dibiConnection->query($this->constructQuery($queryCarrier));
-        $data = array();
-        while ($record = $result->fetch()) $data[] = $record;
-        return $data;
+	public function dataFromQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
+        return $this->dibiConnection->fetchAll(\str_replace('\\\\', '\\', $query = $this->constructQuery($queryCarrier)));
     }
 
     /**
