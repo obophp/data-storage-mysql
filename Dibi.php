@@ -42,9 +42,10 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
     /**
      * @param \obo\Carriers\QueryCarrier $queryCarrier
+	 * @param boolean $asArray
      * @return string
      */
-    public function constructQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
+    public function constructQuery(\obo\Carriers\QueryCarrier $queryCarrier, $asArray = false) {
         $query = "";
         $data = [];
         $queryCarrier = clone $queryCarrier;
@@ -101,6 +102,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $data = \array_merge($data, $queryCarrier->getOffset()["data"]);
         }
 
+        if ($asArray) return \array_merge(array($query), $data);
         return (new \DibiTranslator($this->dibiConnection))->translate(\array_merge(array($query), $data));
     }
 
@@ -121,8 +123,8 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param \obo\Carriers\QueryCarrier $queryCarrier
      * @return array
      */
-	public function dataFromQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
-        return $this->dibiConnection->fetchAll(\str_replace('\\\\', '\\', $query = $this->constructQuery($queryCarrier)));
+    public function dataFromQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
+        return $this->dibiConnection->fetchAll($this->constructQuery($queryCarrier, true));
     }
 
     /**
@@ -132,7 +134,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     public function countRecordsForQuery(\obo\Carriers\QueryCarrier $queryCarrier, $primaryPropertyName) {
         $queryCarrier->select("COUNT(DISTINCT {{$primaryPropertyName}})");
-        return (int) $this->dibiConnection->fetchSingle($this->constructQuery($queryCarrier));
+        return (int) $this->dibiConnection->fetchSingle($this->constructQuery($queryCarrier, true));
     }
 
     /**
