@@ -1,10 +1,10 @@
 <?php
 
 /**
- * This file is part of framework Obo Development version (http://www.obophp.org/)
- * @link http://www.obophp.org/
- * @author Adam Suba, http://www.adamsuba.cz/
- * @copyright (c) 2011 - 2014 Adam Suba
+ * This file is part of the Obo framework for application domain logic.
+ * Obo framework is based on voluntary contributions from different developers.
+ *
+ * @link https://github.com/obophp/data-storage-dibi
  * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License, Version 2.0
  */
 
@@ -12,7 +12,8 @@ namespace obo\DataStorage;
 
 class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
-    protected $dibiConnection = null;
+    /** @var \DibiConnection $dibiConnection */
+    protected $dibiConnection;
 
     /**
      * @param \DibiConnection $dibiConnection
@@ -26,7 +27,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return boolean
      */
     public function existsRepositoryWithName($repositoryName) {
-        return (boolean) $this->dibiConnection->fetchSingle($query = "SHOW TABLES LIKE '{$repositoryName}';");
+        return (boolean) $this->dibiConnection->fetchSingle("SHOW TABLES LIKE %s;", $repositoryName);
     }
 
     /**
@@ -34,15 +35,12 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return array
      */
     public function columnsInRepositoryWithName($repositoryName) {
-        $query = "SHOW COLUMNS FROM [{$repositoryName}];";
-        $tableColumns = array();
-        foreach ($this->dibiConnection->fetchAll($query) as $column) $tableColumns[$column->Field] = $column->Type;
-        return $tableColumns;
+        return $this->dibiConnection->query("SHOW COLUMNS FROM %n", $repositoryName)->fetchPairs("Field", "Type");
     }
 
     /**
      * @param \obo\Carriers\QueryCarrier $queryCarrier
-	 * @param boolean $asArray
+     * @param boolean $asArray
      * @return string
      */
     public function constructQuery(\obo\Carriers\QueryCarrier $queryCarrier, $asArray = false) {
@@ -114,9 +112,8 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $tableName = $entity->entityInformation()->repositoryName;
         $primaryPropertyName = $entity->entityInformation()->primaryPropertyName;
         $primaryPropertyColumnName = $entity->informationForPropertyWithName($primaryPropertyName)->columnName;
-        $query = "SELECT * FROM [{$tableName}] WHERE [{$tableName}].[{$primaryPropertyColumnName}] = %i LIMIT 1";
-        $data = $this->dibiConnection->fetchAll($query, $entity->primaryPropertyValue());
-        return isset($data[0]) ? (array) $data[0] : array();
+        $primaryPropertyValue = $entity->primaryPropertyValue();
+        return (array) $this->dibiConnection->query("SELECT * FROM %n WHERE %n = %i", $tableName, $primaryPropertyColumnName, $primaryPropertyValue)->fetchSingle();
     }
 
     /**
