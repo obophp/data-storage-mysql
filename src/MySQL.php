@@ -10,32 +10,32 @@
 
 namespace obo\DataStorage;
 
-class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
+class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
+
 
     /** @var \DibiConnection $dibiConnection */
-    protected $dibiConnection;
+    protected $dibiConnection = null;
+
+    /**
+     * @var \obo\DataStorage\Interfaces\IDataConverter
+     */
+    protected $dataConverter = null;
+
+    /** @var \obo\Interfaces\ICache */
+    protected $cache = null;
+
+    /** @var \obo\Carriers\EntityInformationCarrier[] */
+    protected $informations = null;
 
     /**
      * @param \DibiConnection $dibiConnection
+     * @param \obo\Interfaces\ICache $cache
      */
-    public function __construct(\DibiConnection $dibiConnection) {
+    public function __construct(\DibiConnection $dibiConnection, \obo\DataStorage\Interfaces\IDataConverter $dataConverter, \obo\Interfaces\ICache $cache = null) {
+        if (!$dibiConnection->driver instanceof \DibiMySqlDriver) throw new \obo\Exceptions\Exception("Wrong driver is set for dibi connection. Mysql driver was expected.");
         $this->dibiConnection = $dibiConnection;
-    }
-
-    /**
-     * @param string $repositoryName
-     * @return boolean
-     */
-    public function existsRepositoryWithName($repositoryName) {
-        return (boolean) $this->dibiConnection->fetchSingle("SHOW TABLES LIKE %s;", $repositoryName);
-    }
-
-    /**
-     * @param string $repositoryName
-     * @return array
-     */
-    public function columnsInRepositoryWithName($repositoryName) {
-        return $this->dibiConnection->query("SHOW COLUMNS FROM %n", $repositoryName)->fetchPairs("Field", "Type");
+        $this->dataConverter = $dataConverter;
+        $this->cache = $cache;
     }
 
     /**
@@ -44,27 +44,24 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return string
      */
     public function constructQuery(\obo\Carriers\QueryCarrier $queryCarrier, $asArray = false) {
+        if (\is_null($queryCarrier->getDefaultEntityClassName())) throw new \obo\Exceptions\Exception("Default entity hasn't been set for QueryCarrier");
+
         $query = "";
         $data = [];
         $queryCarrier = clone $queryCarrier;
+        $joins = array();
+        $select = $queryCarrier->getSelect();
+        $where = $queryCarrier->getWhere();
+        $orderBy = $queryCarrier->getOrderBy();
+        $join = $queryCarrier->getJoin();
 
-        if (!is_null($queryCarrier->getDefaultEntityClassName())) {
-            $joins = array();
+        $this->convert($queryCarrier->getDefaultEntityClassName(), $select, $joins);
+        $this->convert($queryCarrier->getDefaultEntityClassName(), $where, $joins);
+        $this->convert($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
+        $this->convert($queryCarrier->getDefaultEntityClassName(), $join, $joins);
 
-            $select = $queryCarrier->getSelect();
-            $where = $queryCarrier->getWhere();
-            $orderBy = $queryCarrier->getOrderBy();
-            $join = $queryCarrier->getJoin();
-
-            $this->convert($queryCarrier->getDefaultEntityClassName(), $select, $joins);
-            $this->convert($queryCarrier->getDefaultEntityClassName(), $where, $joins);
-            $this->convert($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
-            $this->convert($queryCarrier->getDefaultEntityClassName(), $join, $joins);
-
-            $queryCarrier->join($joins);
-            $join = $queryCarrier->getJoin();
-        }
-
+        $queryCarrier->join($joins);
+        $join = $queryCarrier->getJoin();
 
         $query.= "SELECT " . rtrim($select["query"],",");
         $data = \array_merge($data, $select["data"]);
@@ -105,23 +102,11 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     }
 
     /**
-     * @param \obo\Entity $entity
-     * @return array
-     */
-    public function dataForEntity(\obo\Entity $entity) {
-        $tableName = $entity->entityInformation()->repositoryName;
-        $primaryPropertyName = $entity->entityInformation()->primaryPropertyName;
-        $primaryPropertyColumnName = $entity->informationForPropertyWithName($primaryPropertyName)->columnName;
-        $primaryPropertyValue = $entity->primaryPropertyValue();
-        return (array) $this->dibiConnection->query("SELECT * FROM %n WHERE %n = %i", $tableName, $primaryPropertyColumnName, $primaryPropertyValue)->fetchSingle();
-    }
-
-    /**
      * @param \obo\Carriers\QueryCarrier $queryCarrier
      * @return array
      */
-    public function dataFromQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
-        return $this->dibiConnection->fetchAll($this->constructQuery($queryCarrier, true));
+    public function dataForQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
+        return $this->convertDataForExport($this->dibiConnection->fetchAll($this->constructQuery($queryCarrier, true)), $queryCarrier->getDefaultEntityEntityInformation());
     }
 
     /**
@@ -139,12 +124,9 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return void
      */
     public function insertEntity(\obo\Entity $entity) {
-        if ($entity->isBasedInRepository()) {
-            $this->updateEntity($entity);
-        } else {
-            $this->dibiConnection->query("INSERT INTO [{$entity->entityInformation()->repositoryName}] ", $entity->entityInformation()->propertiesNamesToColumnsNames($entity->dataWhoNeedToStore($entity->entityInformation()->columnsNamesToPropertiesNames($entity->entityInformation()->repositoryColumns))));
-            $entity->setValueForPropertyWithName($this->dibiConnection->getInsertId(), $entity->entityInformation()->primaryPropertyName);
-        }
+        if ($entity->isBasedInRepository()) throw new \obo\Exceptions\Exception("Can't insert entity into storage. Entity is already persisted.");
+        $this->dibiConnection->query("INSERT INTO [{$entity->entityInformation()->repositoryName}] ", $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation()));
+        if ($autoIncrementProperty = $this->informations[$entity->entityInformation()->className]["autoIncrementProperty"]) $entity->setValueForPropertyWithName($this->dibiConnection->getInsertId(), $autoIncrementProperty);
     }
 
     /**
@@ -154,7 +136,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function updateEntity(\obo\Entity $entity) {
         $primaryPropertyName = $entity->entityInformation()->primaryPropertyName;
         $primaryPropertyColumnName = $entity->informationForPropertyWithName($primaryPropertyName)->columnName;
-        $this->dibiConnection->query("UPDATE [{$entity->entityInformation()->repositoryName}] SET %a", $entity->entityInformation()->propertiesNamesToColumnsNames($entity->dataWhoNeedToStore($entity->entityInformation()->columnsNamesToPropertiesNames($entity->entityInformation()->repositoryColumns))), "WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = %i", $entity->primaryPropertyValue());
+        $this->dibiConnection->query("UPDATE [{$entity->entityInformation()->repositoryName}] SET %a", $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation()), "WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = %i", $entity->primaryPropertyValue());
     }
 
     /**
@@ -175,11 +157,11 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function createRelationshipBetweenEntities($repositoryName, array $entities) {
 
         if (\obo\obo::$developerMode) {
-            if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can not be created. Repository with the name '{$repositoryName}' does not exist.");
-            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can not be created. Two entities were expected but " . \count($entities) . " given.");
+            if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can't be created. Repository with the name '{$repositoryName}' does not exist.");
+            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can't be created. Two entities were expected but " . \count($entities) . " given.");
 
             foreach ($entities as $entity) {
-                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can not be created. Entities must be of \obo\Entity instance");
+                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can't be created. Entities must be of \obo\Entity instance");
             }
         }
 
@@ -195,29 +177,118 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function removeRelationshipBetweenEntities($repositoryName, array $entities) {
 
         if (\obo\obo::$developerMode) {
-            if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can not deleted repository with the name '{$repositoryName}' does not exist");
-            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can not be deleted. Two entities were expected but " . \count($entities) . " given. ");
+            if (!$this->existsRepositoryWithName($repositoryName)) throw new \obo\Exceptions\Exception("Relationship can't deleted repository with the name '{$repositoryName}' does not exist");
+            if (\count($entities) !== 2) throw new \obo\Exceptions\Exception("Relationship can't be deleted. Two entities were expected but " . \count($entities) . " given. ");
 
             foreach ($entities as $entity) {
-                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can not be deleted. Entities must be of \obo\Entity instance.");
+                if (!$entity instanceof \obo\Entity) throw new \obo\Exceptions\Exception("Relationship can't be deleted. Entities must be of \obo\Entity instance.");
             }
         }
 
         $this->dibiConnection->query("DELETE FROM [{$repositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = {$entities[1]->primaryPropertyValue()}");
-
     }
 
     /**
-     * @param string $columnName
-     * @param \obo\Entity $entity
-     * @return boolean
+     * @param \obo\Carriers\EntityInformationCarrier $entityInformation
+     * @return array
      */
-    protected function existRepositoryColumnWithNameForEntity($columnName, \obo\Entity $entity) {
-        if (!$this->existRepositoryForEntity($entity->entityInformation())) return false;
-        $tableColumn = self::columnsInRepositoryForEntity($entity);
-        return isset($tableColumn[$columnName]);
+    protected function informationForEntity(\obo\Carriers\EntityInformationCarrier $entityInformation) {
+        return isset($this->informations[$entityInformation->className]) ? $this->informations[$entityInformation->className] : $this->loadInformationForEntity($entityInformation);
     }
 
+    /**
+     * @param \obo\Carriers\EntityInformationCarrier $entityInformation
+     * @return array
+     */
+    protected function loadInformationForEntity(\obo\Carriers\EntityInformationCarrier $entityInformation) {
+        if (\obo\obo::$developerMode OR $this->cache === null) {
+            $information = $this->createInformationForEntity($entityInformation);
+        } else {
+            if (\is_null($information = $this->cache->load($entityInformation->className))) {
+                $this->cache->store($entityInformation->className, $information = $this->createInformationForEntity($entityInformation));
+            }
+        }
+
+        return $this->informations[$entityInformation->className] = $information;
+    }
+
+    /**
+     * @param \obo\Carriers\EntityInformationCarrier $entityInformation
+     * @return array
+     */
+    protected function createInformationForEntity(\obo\Carriers\EntityInformationCarrier $entityInformation) {
+        $information = ["table" => $entityInformation->repositoryName, "columns" => [], "autoIncrementProperty" => null, "toPropertyName" => [], "toColumnName" => []];
+
+        foreach ($this->dibiConnection->fetchAll("SHOW COLUMNS FROM [{$information["table"]}];") as $row) {
+            $information["columns"][$row->Field] = ["field" => $row->Field,
+                "type" => preg_replace("#[^a-z]+.*$#", '', $row->Type),
+                "null" => $row->Null,
+                "key" => $row->Key,
+                "default" => $row->Default,
+                "extra" => $row->Extra];
+        }
+
+        foreach ($entityInformation->persistablePropertiesNames as $persitablePropertyName) {
+            $propertyInformation = $entityInformation->informationForPropertyWithName($persitablePropertyName);
+            $information["columns"][$propertyInformation->columnName]["propertyName"] = $propertyInformation->name;
+            $information["columns"][$propertyInformation->columnName]["nullable"] = $propertyInformation->nullable;
+            if ($information["columns"][$propertyInformation->columnName]["autoIncrement"] = $propertyInformation->autoIncrement) $information["autoIncrementProperty"] = $persitablePropertyName;
+            $information["columns"][$propertyInformation->columnName]["exportFilter"] = $this->dataConverter->convertFilterForCombinationCode("D" . $information["columns"][$propertyInformation->columnName]["type"] . "->O" . $propertyInformation->dataType->name());
+            $information["columns"][$propertyInformation->columnName]["importFilter"] = $this->dataConverter->convertFilterForCombinationCode("O" . $propertyInformation->dataType->name() . "->D" . $information["columns"][$propertyInformation->columnName]["type"]);
+            $information["toPropertyName"][$propertyInformation->columnName] = $propertyInformation->name;
+            $information["toColumnName"][$propertyInformation->name] = $propertyInformation->columnName;
+        }
+        
+        return $this->informations[$entityInformation->className] = $information;
+    }
+
+    /**
+     * @param array $data
+     * @param \obo\Carriers\EntityInformationCarrier $entityInformation
+     * @return array
+     */
+    protected function convertDataForExport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
+        $convertedData = [];
+
+        $information = $this->informationForEntity($entityInformation);
+
+        foreach($data as $row) {
+            $conwertedRow = [];
+            foreach ($row as $columnName => $columnValue) {
+                if (!isset($information["toPropertyName"][$columnName])) continue;
+                $conwertedRow[$information["toPropertyName"][$columnName]] = ($information["columns"][$columnName]["exportFilter"] === null OR ($columnValue === null AND $information["columns"][$columnName]["nullable"])) ? $columnValue : $this->dataConverter->{$information["columns"][$columnName]["exportFilter"]}($columnValue);
+            }
+            $convertedData[] = $conwertedRow;
+        }
+
+        return $convertedData;
+    }
+
+    /**
+     * @param array $data
+     * @param \obo\Carriers\EntityInformationCarrier $entityInformation
+     * @return array
+     */
+    protected function convertDataForImport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
+        $convertedData = [];
+
+        $information = $this->informationForEntity($entityInformation);
+
+        foreach($data as $propertyName => $propertyValue) {
+            if ($information["columns"][$information["toColumnName"][$propertyName]]["autoIncrement"]) continue;
+            $convertedData[$information["toColumnName"][$propertyName]] = ($information["columns"][$information["toColumnName"][$propertyName]]["importFilter"] === null OR $propertyValue === null) ? $propertyValue : $this->dataConverter->{$information["columns"][$information["toColumnName"][$propertyName]]["importFilter"]}($propertyValue);
+        }
+
+        return $convertedData;
+    }
+
+    /**
+     * @param string $repositoryName
+     * @return boolean
+     */
+    protected function existsRepositoryWithName($repositoryName) {
+        return (boolean) $this->dibiConnection->fetchSingle("SHOW TABLES LIKE %s;", $repositoryName);
+    }
 
     /**
      * @param string $defaultEntityClassName
@@ -242,7 +313,7 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
                     if (isset($defaultPropertyInformation->relationship->entityClassNameToBeConnectedInPropertyWithName)
                             AND $defaultPropertyInformation->relationship->entityClassNameToBeConnectedInPropertyWithName)
-                        throw new \obo\Exceptions\AutoJoinException("Functionality autojoin can not be used in non-static relationship ONE for property with name '{$defaultPropertyInformation->name}'");
+                        throw new \obo\Exceptions\AutoJoinException("Functionality autojoin can't be used in non-static relationship ONE for property with name '{$defaultPropertyInformation->name}'");
 
                     $defaultEntityInformation = $defaultEntityClassName::entityInformation();
                     $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
@@ -364,5 +435,4 @@ class Dibi extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 ON [{$connectViaRepositoryWithName}].[{$ownedRepositoryName}]
                 = [{$joinKey}].[{$ownedPrimaryPropertyColumnName}]{$softDeleteClausule}";
     }
-
 }
