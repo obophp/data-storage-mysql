@@ -1,5 +1,5 @@
 {
-    "name": "obo/data-storage-dibi",
+    "name": "obo/data-storage-mysql",
     "type": "library",
     "description": "",
     "keywords": ["framework", "domain logic", "orm", "database"],
