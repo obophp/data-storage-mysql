@@ -12,7 +12,6 @@ namespace obo\DataStorage;
 
 class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
-
     /** @var \DibiConnection $dibiConnection */
     protected $dibiConnection = null;
 
@@ -32,7 +31,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param \obo\Interfaces\ICache $cache
      */
     public function __construct(\DibiConnection $dibiConnection, \obo\DataStorage\Interfaces\IDataConverter $dataConverter, \obo\Interfaces\ICache $cache = null) {
-        if (!$dibiConnection->driver instanceof \DibiMySqlDriver) throw new \obo\Exceptions\Exception("Wrong driver is set for dibi connection. Mysql driver was expected.");
+        if ($dibiConnection->getConfig("driver") !== "mysqli" AND $dibiConnection->getConfig("driver") !== "mysql") throw new \obo\Exceptions\Exception("Wrong driver has been set for dibi connection. Mysql or mysqli driver was expected.");
         $this->dibiConnection = $dibiConnection;
         $this->dataConverter = $dataConverter;
         $this->cache = $cache;
@@ -151,8 +150,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     /**
      * @param string $repositoryName
      * @param \obo\Entity[]
-     * @throws \obo\Exceptions\Exception
      * @return void
+     * @throws \obo\Exceptions\Exception
      */
     public function createRelationshipBetweenEntities($repositoryName, array $entities) {
 
@@ -171,8 +170,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     /**
      * @param string $repositoryName
      * @param array $entities
-     * @throws \obo\Exceptions\Exception
      * @return void
+     * @throws \obo\Exceptions\Exception
      */
     public function removeRelationshipBetweenEntities($repositoryName, array $entities) {
 
@@ -238,7 +237,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $information["toPropertyName"][$propertyInformation->columnName] = $propertyInformation->name;
             $information["toColumnName"][$propertyInformation->name] = $propertyInformation->columnName;
         }
-        
+
         return $this->informations[$entityInformation->className] = $information;
     }
 
@@ -294,8 +293,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param string $defaultEntityClassName
      * @param array $part
      * @param array $joins
-     * @throws \obo\Exceptions\AutoJoinException
      * @return void
+     * @throws \obo\Exceptions\AutoJoinException
      */
     protected function convert($defaultEntityClassName, array &$part, array &$joins) {
         $originalDefaultEntityClassName = $defaultEntityClassName;
