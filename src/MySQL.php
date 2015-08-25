@@ -229,6 +229,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         foreach ($entityInformation->persistablePropertiesNames as $persitablePropertyName) {
             $propertyInformation = $entityInformation->informationForPropertyWithName($persitablePropertyName);
+            if (!isset($information["columns"][$propertyInformation->columnName])) throw new \obo\Exceptions\Exception("Column '{$propertyInformation->columnName}' does not exist for persistable property '{$persitablePropertyName}' in table '{$information["table"]}'");
             $information["columns"][$propertyInformation->columnName]["propertyName"] = $propertyInformation->name;
             $information["columns"][$propertyInformation->columnName]["nullable"] = $propertyInformation->nullable;
             if ($information["columns"][$propertyInformation->columnName]["autoIncrement"] = $propertyInformation->autoIncrement) $information["autoIncrementProperty"] = $persitablePropertyName;
