@@ -12,7 +12,9 @@ namespace obo\DataStorage;
 
 class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
-    /** @var \DibiConnection $dibiConnection */
+    /**
+     * @var \DibiConnection $dibiConnection
+     */
     protected $dibiConnection = null;
 
     /**
@@ -20,10 +22,14 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     protected $dataConverter = null;
 
-    /** @var \obo\Interfaces\ICache */
+    /**
+     *  @var \obo\Interfaces\ICache
+     */
     protected $cache = null;
 
-    /** @var \obo\Carriers\EntityInformationCarrier[] */
+    /**
+     * @var \obo\Carriers\EntityInformationCarrier[]
+     */
     protected $informations = null;
 
     /**
@@ -54,10 +60,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $orderBy = $queryCarrier->getOrderBy();
         $join = $queryCarrier->getJoin();
 
-        $this->convert($queryCarrier->getDefaultEntityClassName(), $select, $joins);
-        $this->convert($queryCarrier->getDefaultEntityClassName(), $where, $joins);
-        $this->convert($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
-        $this->convert($queryCarrier->getDefaultEntityClassName(), $join, $joins);
+        $this->process($queryCarrier->getDefaultEntityClassName(), $select, $joins);
+        $this->process($queryCarrier->getDefaultEntityClassName(), $where, $joins);
+        $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
+        $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins);
 
         $queryCarrier->join($joins);
         $join = $queryCarrier->getJoin();
@@ -148,6 +154,45 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     }
 
     /**
+     * @param \obo\Carriers\QueryCarrier $specification
+     * @param string $repositoryName
+     * @param \obo\Entity $owner
+     * @param string $targetEntity
+     * @return int
+     */
+    public function countEntitiesInRelationship(\obo\Carriers\QueryCarrier $specification, $repositoryName, \obo\Entity $owner, $targetEntity) {
+        return $this->countRecordsForQuery($this->constructJoinQueryForRelationship($specification, $repositoryName, $owner, $targetEntity), $targetEntity::entityInformation()->$entity->entityInformation()->primaryPropertyName);
+    }
+
+    /**
+     * @param \obo\Carriers\QueryCarrier $specification
+     * @param string $repositoryName
+     * @param \obo\Entity $owner
+     * @param string $targetEntity
+     * @return array
+     */
+    public function dataForEntitiesInRelationship(\obo\Carriers\QueryCarrier $specification, $repositoryName, \obo\Entity $owner, $targetEntity) {
+        return $this->dataForQuery($this->constructJoinQueryForRelationship($specification, $repositoryName, $owner, $targetEntity));
+    }
+
+    /**
+     * @param \obo\Carriers\QueryCarrier $specification
+     * @param string $repositoryName
+     * @param \obo\Entity $owner
+     * @param string $targetEntity
+     */
+    protected function constructJoinQueryForRelationship(\obo\Carriers\QueryCarrier $specification, $repositoryName, \obo\Entity $owner, $targetEntity) {
+        $targetEntityPropertyNameForSoftDelete = $targetEntity::entityInformation()->propertyNameForSoftDelete;
+
+        if ($targetEntityPropertyNameForSoftDelete === "") {
+            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = %s AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
+        } else {
+            $softDeleteJoinQuery = "AND [{$targetEntity::entityInformation()->repositoryName}].[{$targetEntity::informationForPropertyWithName($targetEntityPropertyNameForSoftDelete)->columnName}] = %b";
+            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = %s AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), FALSE);
+        }
+    }
+
+    /**
      * @param string $repositoryName
      * @param \obo\Entity[]
      * @return void
@@ -191,7 +236,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param \obo\Carriers\EntityInformationCarrier $entityInformation
      * @return array
      */
-    protected function informationForEntity(\obo\Carriers\EntityInformationCarrier $entityInformation) {
+    public function informationForEntity(\obo\Carriers\EntityInformationCarrier $entityInformation) {
         return isset($this->informations[$entityInformation->className]) ? $this->informations[$entityInformation->className] : $this->loadInformationForEntity($entityInformation);
     }
 
@@ -297,8 +342,11 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return void
      * @throws \obo\Exceptions\AutoJoinException
      */
-    protected function convert($defaultEntityClassName, array &$part, array &$joins) {
+    protected function process($defaultEntityClassName, array &$part, array &$joins) {
         $originalDefaultEntityClassName = $defaultEntityClassName;
+
+        self::processJunctions($part["query"], $joins, $defaultEntityClassName);
+
         \preg_match_all("#(\{(.*?)\}\.?)+#", $part["query"], $blocks);
         foreach ($blocks[0] as $block) {
             $defaultEntityClassName = $originalDefaultEntityClassName;
@@ -333,7 +381,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
                     } elseif ($defaultPropertyInformation->relationship instanceof \obo\Relationships\Many) {
 
-                        if (\is_null($defaultPropertyInformation->relationship->connectViaRepositoryWithName)) {
+                        if ($defaultPropertyInformation->relationship->connectViaRepositoryWithName === "") {
 
                             $join = self::manyViaPropertyRelationshipJoinQuery(
                                         $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
@@ -344,7 +392,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                                         $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                     );
 
-                            if (!\is_null($defaultPropertyInformation->relationship->ownerNameInProperty)) {
+                            if ($defaultPropertyInformation->relationship->ownerNameInProperty !== "") {
                                 $join .= self::manyViaPropertyRelationshipExtendsJoinQuery(
                                             $joinKey,//$joinKey
                                             $defaultPropertyInformation->relationship->ownerNameInProperty,//$ownerNameInPropertyWithName
@@ -352,7 +400,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                                         );
                             }
 
-                        } elseif (\is_null($defaultPropertyInformation->relationship->connectViaPropertyWithName)) {
+                        } elseif ($defaultPropertyInformation->relationship->connectViaPropertyWithName === "") {
                             $join = self::manyViaRepostioryRelationshipJoinQuery(
                                         $joinKey,//$joinKey
                                         $defaultPropertyInformation->relationship->connectViaRepositoryWithName,//$connectViaRepositoryWithName
@@ -375,7 +423,23 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
             $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]", $part["query"], 1);
         }
+    }
 
+    /**
+     * @param string $query
+     * @param array $joins
+     * @param string $defaultEntityClassName
+     * @return void
+     */
+    protected static function processJunctions(&$query, array &$joins, $defaultEntityClassName) {
+        if (\preg_match_all("#\{\*([A-Za-z0-9_]+?\:[A-Za-z0-9_]+?)\*\}#", $query, $blocks)) {
+            foreach($blocks[1] as $key => $block) {
+                $parts = \explode(":", $block);
+                $joinKey = "{$defaultEntityClassName}->{$parts[0]}_{$parts[1]}";
+                $joins[$joinKey] = "INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = {$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}";
+                $query = \str_replace($blocks[0][$key], "[{$joinKey}].[{$parts[1]}]" , $query);
+            }
+        }
     }
 
     /**
