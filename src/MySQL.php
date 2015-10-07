@@ -13,9 +13,14 @@ namespace obo\DataStorage;
 class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
     /**
-     * @var \DibiConnection $dibiConnection
+     * @var \DibiConnection
      */
     protected $dibiConnection = null;
+
+    /**
+     * @var \DibiTranslator
+     */
+    protected $dibiTranslator = null;
 
     /**
      * @var \obo\DataStorage\Interfaces\IDataConverter
@@ -33,14 +38,27 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected $informations = null;
 
     /**
+     * @var string
+     */
+    protected $parameterPlaceholder = \obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER;
+
+    /**
      * @param \DibiConnection $dibiConnection
      * @param \obo\Interfaces\ICache $cache
      */
     public function __construct(\DibiConnection $dibiConnection, \obo\DataStorage\Interfaces\IDataConverter $dataConverter, \obo\Interfaces\ICache $cache = null) {
         if ($dibiConnection->getConfig("driver") !== "mysqli" AND $dibiConnection->getConfig("driver") !== "mysql") throw new \obo\Exceptions\Exception("Wrong driver has been set for dibi connection. Mysql or mysqli driver was expected.");
         $this->dibiConnection = $dibiConnection;
+        $this->dibiTranslator = new \DibiTranslator($this->dibiConnection);
         $this->dataConverter = $dataConverter;
         $this->cache = $cache;
+    }
+
+    /**
+     * @return \DibiConnection
+     */
+    public function getDibiConnection() {
+        return $this->dibiConnection;
     }
 
     /**
@@ -68,42 +86,42 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $queryCarrier->join($joins);
         $join = $queryCarrier->getJoin();
 
-        $query.= "SELECT " . rtrim($select["query"],",");
+        $query .= "SELECT " . rtrim($select["query"],",");
         $data = \array_merge($data, $select["data"]);
 
         if ($queryCarrier->getFrom()["query"] === "") {
             $defaultEntityClassName = $queryCarrier->getDefaultEntityClassName();
-            $query.= " FROM [".$defaultEntityClassName::entityInformation()->repositoryName."]";
+            $query .= " FROM [".$defaultEntityClassName::entityInformation()->repositoryName."]";
         } else {
-            $query.= " FROM " . rtrim($queryCarrier->getFrom()["query"],",");
+            $query .= " FROM " . rtrim($queryCarrier->getFrom()["query"],",");
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
-        $query.= rtrim($join["query"], ",");
+        $query .= rtrim($join["query"], ",");
         $data = \array_merge($data, $join["data"]);
 
         if ($where["query"] !== "") {
-            $query.= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
+            $query .= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
             $data = \array_merge($data, $where["data"]);
         }
 
         if ($orderBy["query"] !== "") {
-            $query.= " ORDER BY " . rtrim($orderBy["query"], ",");
+            $query .= " ORDER BY " . rtrim($orderBy["query"], ",");
             $data = \array_merge($data, $orderBy["data"]);
         }
 
         if ($queryCarrier->getLimit()["query"] !== "") {
-            $query.= " LIMIT " . $queryCarrier->getLimit()["query"];
+            $query .= " LIMIT " . $queryCarrier->getLimit()["query"];
             $data = \array_merge($data, $queryCarrier->getLimit()["data"]);
         }
 
         if ($queryCarrier->getOffset()["query"] !== "") {
-            $query.= " OFFSET " . $queryCarrier->getOffset()["query"];
+            $query .= " OFFSET " . $queryCarrier->getOffset()["query"];
             $data = \array_merge($data, $queryCarrier->getOffset()["data"]);
         }
 
-        if ($asArray) return \array_merge(array($query), $data);
-        return (new \DibiTranslator($this->dibiConnection))->translate(\array_merge(array($query), $data));
+        if ($asArray) return \array_merge([$query], $data);
+        return $this->dibiTranslator->translate(\array_merge([$query], $data));
     }
 
     /**
@@ -141,7 +159,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function updateEntity(\obo\Entity $entity) {
         $primaryPropertyName = $entity->entityInformation()->primaryPropertyName;
         $primaryPropertyColumnName = $entity->informationForPropertyWithName($primaryPropertyName)->columnName;
-        $this->dibiConnection->query("UPDATE [{$entity->entityInformation()->repositoryName}] SET %a", $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation()), "WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = %i", $entity->primaryPropertyValue());
+        $this->dibiConnection->query("UPDATE [{$entity->entityInformation()->repositoryName}] SET %a", $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation()), "WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = " . $this->informationForEntity($entity->entityInformation())["columns"][$primaryPropertyColumnName]["placeholder"], $entity->primaryPropertyValue());
     }
 
     /**
@@ -150,7 +168,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     public function removeEntity(\obo\Entity $entity) {
         $primaryPropertyColumnName = $entity->informationForPropertyWithName($entity->entityInformation()->primaryPropertyName)->columnName;
-        $this->dibiConnection->query("DELETE FROM [{$entity->entityInformation()->repositoryName}] WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = %i LIMIT 1", $entity->primaryPropertyValue());
+        $this->dibiConnection->query("DELETE FROM [{$entity->entityInformation()->repositoryName}] WHERE [{$entity->entityInformation()->repositoryName}].[{$primaryPropertyColumnName}] = " . $this->informationForEntity($entity->entityInformation())["columns"][$primaryPropertyColumnName]["placeholder"] . " LIMIT 1", $entity->primaryPropertyValue());
     }
 
     /**
@@ -161,7 +179,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return int
      */
     public function countEntitiesInRelationship(\obo\Carriers\QueryCarrier $specification, $repositoryName, \obo\Entity $owner, $targetEntity) {
-        return $this->countRecordsForQuery($this->constructJoinQueryForRelationship($specification, $repositoryName, $owner, $targetEntity), $targetEntity::entityInformation()->$entity->entityInformation()->primaryPropertyName);
+        return $this->countRecordsForQuery($this->constructJoinQueryForRelationship($specification, $repositoryName, $owner, $targetEntity), $targetEntity::entityInformation()->primaryPropertyName);
     }
 
     /**
@@ -185,10 +203,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $targetEntityPropertyNameForSoftDelete = $targetEntity::entityInformation()->propertyNameForSoftDelete;
 
         if ($targetEntityPropertyNameForSoftDelete === "") {
-            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = %s AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
+            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
         } else {
             $softDeleteJoinQuery = "AND [{$targetEntity::entityInformation()->repositoryName}].[{$targetEntity::informationForPropertyWithName($targetEntityPropertyNameForSoftDelete)->columnName}] = %b";
-            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = %s AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), FALSE);
+            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), FALSE);
         }
     }
 
@@ -229,7 +247,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             }
         }
 
-        $this->dibiConnection->query("DELETE FROM [{$repositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = {$entities[1]->primaryPropertyValue()}");
+        $this->dibiConnection->query("DELETE FROM [{$repositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = " . $this->informationForEntity($entities[1]->entityInformation())["columns"][$entities[1]->entityInformation()->informationForPropertyWithName($entities[1]->entityInformation()->primaryPropertyName)->columnName]["placeholder"], $entities[1]->primaryPropertyValue());
     }
 
     /**
@@ -265,7 +283,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         foreach ($this->dibiConnection->fetchAll("SHOW COLUMNS FROM [{$information["table"]}];") as $row) {
             $information["columns"][$row->Field] = ["field" => $row->Field,
-                "type" => preg_replace("#[^a-z]+.*$#", '', $row->Type),
+                "type" => $type = preg_replace("#[^a-z]+.*$#", '', $row->Type),
+                "placeholder" => $this->placeholderForColumnType($type),
                 "null" => $row->Null,
                 "key" => $row->Key,
                 "default" => $row->Default,
@@ -333,6 +352,43 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     protected function existsRepositoryWithName($repositoryName) {
         return (boolean) $this->dibiConnection->fetchSingle("SHOW TABLES LIKE %s;", $repositoryName);
+    }
+
+    protected function placeholderForColumnType($columnType) {
+        switch ($columnType) {
+            case "int":
+            case "tinyint":
+            case "smallint":
+            case "mediumint":
+            case "bigint":
+                return "%i";
+            case "float":
+            case "double":
+            case "decimal":
+                return "%f";
+            case "date":
+            case "datetime":
+            case "timestamp":
+            case "time":
+            case "year":
+                return "%t";
+            case "char":
+            case "varchar":
+            case "text":
+            case "tinytext":
+            case "mediumtext":
+            case "longtext":
+            case "enum":
+                return "%s";
+            case "blob":
+            case "tinyblob":
+            case "mediumblob":
+            case "longblob":
+                return "%bin";
+
+            default:
+                throw new \obo\Exceptions\Exception("There is no placeholder for column type '{$columnType}'");
+        }
     }
 
     /**
@@ -421,7 +477,15 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($items[0]);
             }
 
-            $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]", $part["query"], 1);
+            $matches = [];
+            \preg_match("#\{([^\ ]*?\}\.\{[^\ ]*?)*[^\{\}]*?\}[^\{]*?([^\{]*)#", $part["query"], $matches);
+            if (isset($matches[2]) AND \strpos($matches[2], $this->parameterPlaceholder) !== false) {
+                $segment = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]", $matches[0], 1);
+                $segment = \str_replace($this->parameterPlaceholder, $this->informationForEntity($defaultPropertyInformation->entityInformation)["columns"][$defaultPropertyInformation->columnName]["placeholder"], $segment);
+                $part["query"] = \str_replace($matches[0], $segment, $part["query"]);
+            } else {
+                $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]", $part["query"], 1);
+            }
         }
     }
 
@@ -431,13 +495,15 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param string $defaultEntityClassName
      * @return void
      */
-    protected static function processJunctions(&$query, array &$joins, $defaultEntityClassName) {
-        if (\preg_match_all("#\{\*([A-Za-z0-9_]+?\:[A-Za-z0-9_]+?)\*\}#", $query, $blocks)) {
-            foreach($blocks[1] as $key => $block) {
-                $parts = \explode(":", $block);
-                $joinKey = "{$defaultEntityClassName}->{$parts[0]}_{$parts[1]}";
-                $joins[$joinKey] = "INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = {$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}";
-                $query = \str_replace($blocks[0][$key], "[{$joinKey}].[{$parts[1]}]" , $query);
+    protected function processJunctions(&$query, array &$joins, $defaultEntityClassName) {
+        if (\preg_match_all("#(\{\*([A-Za-z0-9_]+?\:[A-Za-z0-9\\\_]+?)\*\})\ *?=\ *?(" . \preg_quote(\obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER) . ")#", $query, $blocks)) {
+            foreach($blocks[0] as $key => $block) {
+                $parts = \explode(":", $blocks[2][$key]);
+                $joinKey = "{$defaultEntityClassName}->{$parts[0]}_{$parts[1]::entityInformation()->repositoryName}";
+                $joins[$joinKey] = "INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = [{$defaultEntityClassName::entityInformation()->repositoryName}].[{$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}]";
+                $newBlock = \str_replace($blocks[1][$key], "[{$joinKey}].[{$parts[1]::entityInformation()->repositoryName}]", $block);
+                $newBlock = \str_replace($blocks[3][$key], $this->informationForEntity($parts[1]::entityInformation())["columns"][$parts[1]::informationForPropertyWithName($parts[1]::entityInformation()->primaryPropertyName)->columnName]["placeholder"], $newBlock);
+                $query = \str_replace($block, $newBlock, $query);
             }
         }
     }
