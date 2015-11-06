@@ -68,7 +68,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     public function constructQuery(\obo\Carriers\QueryCarrier $queryCarrier, $asArray = false) {
         if (\is_null($queryCarrier->getDefaultEntityClassName())) throw new \obo\Exceptions\Exception("Default entity hasn't been set for QueryCarrier");
-
         $query = "";
         $data = [];
         $queryCarrier = clone $queryCarrier;
@@ -78,7 +77,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $orderBy = $queryCarrier->getOrderBy();
         $join = $queryCarrier->getJoin();
 
-        $this->process($queryCarrier->getDefaultEntityClassName(), $select, $joins);
+        $this->process($queryCarrier->getDefaultEntityClassName(), $select, $joins, true);
         $this->process($queryCarrier->getDefaultEntityClassName(), $where, $joins);
         $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
         $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins);
@@ -86,7 +85,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $queryCarrier->join($joins);
         $join = $queryCarrier->getJoin();
 
-        $query .= "SELECT " . rtrim($select["query"],",");
+        $query .= "SELECT " . ((\count($joins) AND \strpos($select["query"], "DISTINCT") === false) ? "DISTINCT " : "") . rtrim($select["query"],",");
         $data = \array_merge($data, $select["data"]);
 
         if ($queryCarrier->getFrom()["query"] === "") {
@@ -121,6 +120,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         }
 
         if ($asArray) return \array_merge([$query], $data);
+
         return $this->dibiTranslator->translate(\array_merge([$query], $data));
     }
 
@@ -134,11 +134,13 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
     /**
      * @param \obo\Carriers\QueryCarrier $queryCarrier
-     * @param string $primaryPropertyName
      * @return int
      */
-    public function countRecordsForQuery(\obo\Carriers\QueryCarrier $queryCarrier, $primaryPropertyName) {
-        $queryCarrier->select("COUNT(DISTINCT {{$primaryPropertyName}})");
+    public function countRecordsForQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
+        $entityInformation = $queryCarrier->getDefaultEntityEntityInformation();
+        $repositoryName = $entityInformation->repositoryName;
+        $primaryPropertyColumn = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName;
+        $queryCarrier->select("COUNT(DISTINCT [{$repositoryName}].[{$primaryPropertyColumn}])");
         return (int) $this->dibiConnection->fetchSingle($this->constructQuery($queryCarrier, true));
     }
 
@@ -313,16 +315,27 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     protected function convertDataForExport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
         $convertedData = [];
-
-        $information = $this->informationForEntity($entityInformation);
+        $defaultEntityInformation = $entityInformation;
 
         foreach($data as $row) {
-            $conwertedRow = [];
+            $convertedRow = [];
             foreach ($row as $columnName => $columnValue) {
-                if (!isset($information["toPropertyName"][$columnName])) continue;
-                $conwertedRow[$information["toPropertyName"][$columnName]] = ($information["columns"][$columnName]["exportFilter"] === null OR ($columnValue === null AND $information["columns"][$columnName]["nullable"])) ? $columnValue : $this->dataConverter->{$information["columns"][$columnName]["exportFilter"]}($columnValue);
+                $parts = \explode("_", $columnName);
+
+                foreach ($parts as $position => $property) {
+                    if ($position !== 0 AND $defaultEntityInformation->informationForPropertyWithName($parts[$position-1])->relationship !== null) {
+                        $connectedEntity = $defaultEntityInformation->informationForPropertyWithName($parts[$position-1])->relationship->entityClassNameToBeConnected;
+                        $defaultEntityInformation = $connectedEntity::entityInformation();
+                    }
+                }
+
+                $information = $this->informationForEntity($defaultEntityInformation);
+                $propertyInformation = $information["columns"][$information["toColumnName"][$property]];
+                $convertedRow[$columnName] = ($propertyInformation["exportFilter"] === null OR ($columnValue === null AND $propertyInformation["nullable"])) ? $columnValue : $this->dataConverter->{$propertyInformation["exportFilter"]}($columnValue);
+                $defaultEntityInformation = $entityInformation;
             }
-            $convertedData[] = $conwertedRow;
+
+            $convertedData[] = $convertedRow;
         }
 
         return $convertedData;
@@ -398,20 +411,22 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return void
      * @throws \obo\Exceptions\AutoJoinException
      */
-    protected function process($defaultEntityClassName, array &$part, array &$joins) {
+    protected function process($defaultEntityClassName, array &$part, array &$joins, $selectPart = false) {
         $originalDefaultEntityClassName = $defaultEntityClassName;
-
         self::processJunctions($part["query"], $joins, $defaultEntityClassName);
-
         \preg_match_all("#(\{(.*?)\}\.?)+#", $part["query"], $blocks);
+
         foreach ($blocks[0] as $block) {
             $defaultEntityClassName = $originalDefaultEntityClassName;
             $joinKey = null;
+            $selectItemAlias = null;
             $ownerRepositoryName = $defaultEntityClassName::entityInformation()->repositoryName;
-            $items = \explode("}.{", trim($block, "{}"));
 
-            if (count($items) > 1) {
-                foreach ($items as $item) {
+            $items = \explode("}.{", trim($block, "{}"));
+            if (($countItems = count($items)) > 1) {
+                $selectItemAlias = null;
+
+                foreach ($items as $key => $item) {
                     $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($item);
                     if (\is_null(($defaultPropertyInformation->relationship))) break;
 
@@ -420,32 +435,37 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                         throw new \obo\Exceptions\AutoJoinException("Functionality autojoin can't be used in non-static relationship ONE for property with name '{$defaultPropertyInformation->name}'");
 
                     $defaultEntityInformation = $defaultEntityClassName::entityInformation();
-                    $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
-                    $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
-                    $entityToBeConnectedInformation = $entityClassNameToBeConnected::entityInformation();
 
-                    if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\One) {
 
+                    if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\One AND ($countItems - 1) !== $key) {
+                        $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
+                        $entityInformationToBeConnected = $entityClassNameToBeConnected::entityInformation();
+                        $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
+
+                        $selectItemAlias .= "{$item}_";
                         $join = self::oneRelationshipJoinQuery(
-                                    $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
+                                    $entityInformationToBeConnected->repositoryName,//$ownedRepositoryName
                                     $joinKey,//$joinKey
                                     $ownerRepositoryName,//$ownerRepositoryName
                                     $defaultEntityInformation->propertiesInformation[$defaultPropertyInformation->relationship->ownerPropertyName]->columnName,//$foreignKeyColumnName
-                                    $entityClassNameToBeConnected::informationForPropertyWithName($entityToBeConnectedInformation->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
-                                    $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                    $entityClassNameToBeConnected::informationForPropertyWithName($entityInformationToBeConnected->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
+                                    $entityInformationToBeConnected->propertyNameForSoftDelete ? $entityInformationToBeConnected->informationForPropertyWithName($entityInformationToBeConnected->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                 );
+                    }
 
-                    } elseif ($defaultPropertyInformation->relationship instanceof \obo\Relationships\Many) {
+                    if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\Many) {
+                        $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
+                        $entityInformationToBeConnected = $entityClassNameToBeConnected::entityInformation();
+                        $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
 
                         if ($defaultPropertyInformation->relationship->connectViaRepositoryWithName === "") {
-
                             $join = self::manyViaPropertyRelationshipJoinQuery(
-                                        $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
+                                        $entityInformationToBeConnected->repositoryName,//$ownedRepositoryName
                                         $joinKey,//$joinKey
                                         $ownerRepositoryName,//$ownerRepositoryName
-                                        $entityToBeConnectedInformation->propertiesInformation[$defaultPropertyInformation->relationship->connectViaPropertyWithName]->columnName,//$foreignKeyColumnName
+                                        $entityInformationToBeConnected->propertiesInformation[$defaultPropertyInformation->relationship->connectViaPropertyWithName]->columnName,//$foreignKeyColumnName
                                         $defaultEntityClassName::informationForPropertyWithName($defaultEntityInformation->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
-                                        $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                        $entityInformationToBeConnected->propertyNameForSoftDelete ? $entityInformationToBeConnected->informationForPropertyWithName($entityInformationToBeConnected->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                     );
 
                             if ($defaultPropertyInformation->relationship->ownerNameInProperty !== "") {
@@ -461,10 +481,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                                         $joinKey,//$joinKey
                                         $defaultPropertyInformation->relationship->connectViaRepositoryWithName,//$connectViaRepositoryWithName
                                         $ownerRepositoryName,//$ownerRepositoryName
-                                        $entityToBeConnectedInformation->repositoryName,//$ownedRepositoryName
+                                        $entityInformationToBeConnected->repositoryName,//$ownedRepositoryName
                                         $defaultEntityClassName::informationForPropertyWithName($defaultEntityInformation->primaryPropertyName)->columnName,//$ownerPrimaryPropertyColumnName
-                                        $entityClassNameToBeConnected::informationForPropertyWithName($entityToBeConnectedInformation->primaryPropertyName)->columnName,//$ownedPrimaryPropertyColumnName
-                                        $entityToBeConnectedInformation->propertyNameForSoftDelete ? $entityToBeConnectedInformation->informationForPropertyWithName($entityToBeConnectedInformation->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                        $entityClassNameToBeConnected::informationForPropertyWithName($entityInformationToBeConnected->primaryPropertyName)->columnName,//$ownedPrimaryPropertyColumnName
+                                        $entityInformationToBeConnected->propertyNameForSoftDelete ? $entityInformationToBeConnected->informationForPropertyWithName($entityInformationToBeConnected->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                     );
                         }
                     }
@@ -472,6 +492,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     $defaultEntityClassName = $entityClassNameToBeConnected;
                     $ownerRepositoryName = $joinKey;
                     $joins[$joinKey] = $join;
+
                 }
             } else {
                 $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($items[0]);
@@ -484,7 +505,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $segment = \str_replace($this->parameterPlaceholder, $this->informationForEntity($defaultPropertyInformation->entityInformation)["columns"][$defaultPropertyInformation->columnName]["placeholder"], $segment);
                 $part["query"] = \str_replace($matches[0], $segment, $part["query"]);
             } else {
-                $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]", $part["query"], 1);
+                $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]". ($selectPart ? " AS [{$selectItemAlias}{$defaultPropertyInformation->name}]" : ""), $part["query"], 1);
             }
         }
     }
