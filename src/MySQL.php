@@ -472,7 +472,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                                 $join .= self::manyViaPropertyRelationshipExtendsJoinQuery(
                                             $joinKey,//$joinKey
                                             $defaultPropertyInformation->relationship->ownerNameInProperty,//$ownerNameInPropertyWithName
-                                            $defaultPropertyInformation->entityInformation->className//$ownerClassName
+                                            $defaultPropertyInformation->entityInformation->name//$ownerName
                                         );
                             }
 
