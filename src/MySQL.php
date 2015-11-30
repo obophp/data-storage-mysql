@@ -517,9 +517,9 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return void
      */
     protected function processJunctions(&$query, array &$joins, $defaultEntityClassName) {
-        if (\preg_match_all("#(\{\*([A-Za-z0-9_]+?\:[A-Za-z0-9\\\_]+?)\*\})\ *?=\ *?(" . \preg_quote(\obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER) . ")#", $query, $blocks)) {
+        if (\preg_match_all("#(\{\*([A-Za-z0-9_]+?\,[A-Za-z0-9\\\_]+?)\*\})\ *?=\ *?(" . \preg_quote(\obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER) . ")#", $query, $blocks)) {
             foreach($blocks[0] as $key => $block) {
-                $parts = \explode(":", $blocks[2][$key]);
+                $parts = \explode(",", $blocks[2][$key]);
                 $joinKey = "{$defaultEntityClassName}->{$parts[0]}_{$parts[1]::entityInformation()->repositoryName}";
                 $joins[$joinKey] = "INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = [{$defaultEntityClassName::entityInformation()->repositoryName}].[{$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}]";
                 $newBlock = \str_replace($blocks[1][$key], "[{$joinKey}].[{$parts[1]::entityInformation()->repositoryName}]", $block);
