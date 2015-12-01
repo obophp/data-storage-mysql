@@ -82,9 +82,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
         $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins);
 
-        $queryCarrier->join($joins);
-        $join = $queryCarrier->getJoin();
-
         $query .= "SELECT " . ((\count($joins) AND \strpos($select["query"], "DISTINCT") === false) ? "DISTINCT " : "") . rtrim($select["query"],",");
         $data = \array_merge($data, $select["data"]);
 
@@ -96,8 +93,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
-        $query .= rtrim($join["query"], ",");
-        $data = \array_merge($data, $join["data"]);
+        $query .= implode($joins, " ");
+
 
         if ($where["query"] !== "") {
             $query .= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
