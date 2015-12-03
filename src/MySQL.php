@@ -72,29 +72,37 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $data = [];
         $queryCarrier = clone $queryCarrier;
         $joins = array();
+        $needDistinct = false;
+        $entityInformation = $queryCarrier->getDefaultEntityEntityInformation();
+        $repositoryName = $entityInformation->repositoryName;
+        $primaryPropertyColumn = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName;
         $select = $queryCarrier->getSelect();
         $where = $queryCarrier->getWhere();
         $orderBy = $queryCarrier->getOrderBy();
         $join = $queryCarrier->getJoin();
 
-        $this->process($queryCarrier->getDefaultEntityClassName(), $select, $joins, true);
-        $this->process($queryCarrier->getDefaultEntityClassName(), $where, $joins);
-        $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins);
-        $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins);
+        $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $select, $joins, true) || $needDistinct;
+        $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $where, $joins) || $needDistinct;
+        $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins) || $needDistinct;
+        $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins) || $needDistinct;
 
-        $query .= "SELECT " . ((\count($joins) AND \strpos($select["query"], "DISTINCT") === false) ? "DISTINCT " : "") . rtrim($select["query"],",");
+        if ("COUNT([{$repositoryName}].[{$primaryPropertyColumn}])" === $select["query"]) {
+            $query .= "SELECT  COUNT(" . ($needDistinct ? "DISTINCT " : "") ."[{$repositoryName}].[{$primaryPropertyColumn}])";
+        } else {
+            $query .= "SELECT " . ($needDistinct ? "DISTINCT " : "") . rtrim($select["query"], ",");
+        }
+
         $data = \array_merge($data, $select["data"]);
 
         if ($queryCarrier->getFrom()["query"] === "") {
             $defaultEntityClassName = $queryCarrier->getDefaultEntityClassName();
-            $query .= " FROM [".$defaultEntityClassName::entityInformation()->repositoryName."]";
+            $query .= " FROM [{$repositoryName}]";
         } else {
             $query .= " FROM " . rtrim($queryCarrier->getFrom()["query"],",");
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
         $query .= implode($joins, " ");
-
 
         if ($where["query"] !== "") {
             $query .= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
@@ -134,10 +142,11 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return int
      */
     public function countRecordsForQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
+        $queryCarrier = clone $queryCarrier;
         $entityInformation = $queryCarrier->getDefaultEntityEntityInformation();
         $repositoryName = $entityInformation->repositoryName;
         $primaryPropertyColumn = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName;
-        $queryCarrier->select("COUNT(DISTINCT [{$repositoryName}].[{$primaryPropertyColumn}])");
+        $queryCarrier->rewriteSelect("COUNT([{$repositoryName}].[{$primaryPropertyColumn}])");
         return (int) $this->dibiConnection->fetchSingle($this->constructQuery($queryCarrier, true));
     }
 
@@ -409,6 +418,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @throws \obo\Exceptions\AutoJoinException
      */
     protected function process($defaultEntityClassName, array &$part, array &$joins, $selectPart = false) {
+        $needDistinct = false;
         $originalDefaultEntityClassName = $defaultEntityClassName;
         self::processJunctions($part["query"], $joins, $defaultEntityClassName);
         \preg_match_all("#(\{(.*?)\}\.?)+#", $part["query"], $blocks);
@@ -451,6 +461,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     }
 
                     if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\Many) {
+                        $needDistinct = true;
                         $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
                         $entityInformationToBeConnected = $entityClassNameToBeConnected::entityInformation();
                         $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
@@ -505,6 +516,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]". ($selectPart ? " AS [{$selectItemAlias}{$defaultPropertyInformation->name}]" : ""), $part["query"], 1);
             }
         }
+
+        return $needDistinct;
     }
 
     /**
