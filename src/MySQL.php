@@ -67,7 +67,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return string
      */
     public function constructQuery(\obo\Carriers\QueryCarrier $queryCarrier, $asArray = false) {
-        if (\is_null($queryCarrier->getDefaultEntityClassName())) throw new \obo\Exceptions\Exception("Default entity hasn't been set for QueryCarrier");
+        if ($queryCarrier->getDefaultEntityClassName() === null) throw new \obo\Exceptions\Exception("Default entity hasn't been set for QueryCarrier");
         $query = "";
         $data = [];
         $queryCarrier = clone $queryCarrier;
@@ -274,7 +274,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         if (\obo\obo::$developerMode OR $this->cache === null) {
             $information = $this->createInformationForEntity($entityInformation);
         } else {
-            if (\is_null($information = $this->cache->load($entityInformation->className))) {
+            if (null === ($information = $this->cache->load($entityInformation->className))) {
                 $this->cache->store($entityInformation->className, $information = $this->createInformationForEntity($entityInformation));
             }
         }
@@ -322,9 +322,9 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected function convertDataForExport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
         $convertedData = [];
         $defaultEntityInformation = $entityInformation;
-
         foreach($data as $row) {
             $convertedRow = [];
+            $nullEntities = [];
             foreach ($row as $columnName => $columnValue) {
                 $parts = \explode("_", $columnName);
 
@@ -333,12 +333,18 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                         $connectedEntity = $defaultEntityInformation->informationForPropertyWithName($parts[$position-1])->relationship->entityClassNameToBeConnected;
                         $defaultEntityInformation = $connectedEntity::entityInformation();
                     }
+
+                    if ($defaultEntityInformation->primaryPropertyName === $property AND $columnValue === null) $nullEntities[$parts[$position-1]] = $parts[$position-1];
                 }
 
                 $information = $this->informationForEntity($defaultEntityInformation);
                 $propertyInformation = $information["columns"][$information["toColumnName"][$property]];
                 $convertedRow[$columnName] = ($propertyInformation["exportFilter"] === null OR ($columnValue === null AND $propertyInformation["nullable"])) ? $columnValue : $this->dataConverter->{$propertyInformation["exportFilter"]}($columnValue);
                 $defaultEntityInformation = $entityInformation;
+            }
+
+            foreach($nullEntities as $nullEntity) {
+                $convertedRow = \array_intersect_key($convertedRow, \array_flip(\array_filter(\array_keys($convertedRow), function($key) use ($nullEntity) {return \strpos($key, "_" . $nullEntity. "_") === false;})));
             }
 
             $convertedData[] = $convertedRow;
@@ -435,22 +441,43 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
                 foreach ($items as $key => $item) {
                     $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($item);
-                    if (\is_null(($defaultPropertyInformation->relationship))) break;
-
-                    if (isset($defaultPropertyInformation->relationship->entityClassNameToBeConnectedInPropertyWithName)
-                            AND $defaultPropertyInformation->relationship->entityClassNameToBeConnectedInPropertyWithName)
+                    if (($defaultPropertyInformation->relationship) === null OR $key + 1 === count($items)) break;
+                    if (isset($defaultPropertyInformation->relationship->entityClassNameToBeConnectedInPropertyWithName) AND $defaultPropertyInformation->relationship->entityClassNameToBeConnectedInPropertyWithName)
                         throw new \obo\Exceptions\AutoJoinException("Functionality autojoin can't be used in non-static relationship ONE for property with name '{$defaultPropertyInformation->name}'");
 
                     $defaultEntityInformation = $defaultEntityClassName::entityInformation();
-
 
                     if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\One AND ($countItems - 1) !== $key) {
                         $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
                         $entityInformationToBeConnected = $entityClassNameToBeConnected::entityInformation();
                         $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
-
                         $selectItemAlias .= "{$item}_";
-                        $join = self::oneRelationshipJoinQuery(
+
+
+                        if ($defaultPropertyInformation->relationship->connectViaProperty AND $defaultPropertyInformation->relationship->ownerNameInProperty) {
+                            $foreignKey[0] = $defaultPropertyInformation->relationship->connectViaProperty;
+                            $foreignKey[1] = $defaultPropertyInformation->relationship->ownerNameInProperty;
+
+                            $join = self::oneInverseDynamicRelationshipJoinQuery(
+                                    $entityInformationToBeConnected->repositoryName,//$ownedRepositoryName
+                                    $joinKey,//$joinKey
+                                    $ownerRepositoryName,//$ownerRepositoryName
+                                    $defaultEntityInformation->name,//$ownerName
+                                    $foreignKey,//$foreignKey
+                                    $entityClassNameToBeConnected::informationForPropertyWithName($entityInformationToBeConnected->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
+                                    $entityInformationToBeConnected->propertyNameForSoftDelete ? $entityInformationToBeConnected->informationForPropertyWithName($entityInformationToBeConnected->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                );
+                        } elseif ($defaultPropertyInformation->relationship->connectViaProperty) {
+                            $join = self::oneInverseRelationshipJoinQuery(
+                                    $entityInformationToBeConnected->repositoryName,//$ownedRepositoryName
+                                    $joinKey,//$joinKey
+                                    $ownerRepositoryName,//$ownerRepositoryName
+                                    $defaultPropertyInformation->relationship->connectViaProperty,//$foreignKeyColumnName
+                                    $entityClassNameToBeConnected::informationForPropertyWithName($entityInformationToBeConnected->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
+                                    $entityInformationToBeConnected->propertyNameForSoftDelete ? $entityInformationToBeConnected->informationForPropertyWithName($entityInformationToBeConnected->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
+                                );
+                        } else {
+                            $join = self::oneRelationshipJoinQuery(
                                     $entityInformationToBeConnected->repositoryName,//$ownedRepositoryName
                                     $joinKey,//$joinKey
                                     $ownerRepositoryName,//$ownerRepositoryName
@@ -458,6 +485,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                                     $entityClassNameToBeConnected::informationForPropertyWithName($entityInformationToBeConnected->primaryPropertyName)->columnName,//$ownedEntityPrimaryColumnName
                                     $entityInformationToBeConnected->propertyNameForSoftDelete ? $entityInformationToBeConnected->informationForPropertyWithName($entityInformationToBeConnected->propertyNameForSoftDelete)->columnName : null//$propertyNameForSoftDelete
                                 );
+                        }
+
                     }
 
                     if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\Many) {
@@ -549,8 +578,37 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return string
      */
     protected static function oneRelationshipJoinQuery($ownedRepositoryName, $joinKey, $ownerRepositoryName, $foreignKeyColumnName, $ownedEntityPrimaryColumnName, $columnNameForSoftDelete) {
-        $softDeleteClausule = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
-        return "LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}] ON [{$ownerRepositoryName}].[{$foreignKeyColumnName}] = [{$joinKey}].[{$ownedEntityPrimaryColumnName}]{$softDeleteClausule}";
+        $softDeleteClause = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
+        return "LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}] ON [{$ownerRepositoryName}].[{$foreignKeyColumnName}] = [{$joinKey}].[{$ownedEntityPrimaryColumnName}]{$softDeleteClause}";
+    }
+
+    /**
+     * @param string $ownedRepositoryName
+     * @param string $joinKey
+     * @param string $ownerRepositoryName
+     * @param string $foreignKeyColumnName
+     * @param string $ownedEntityPrimaryColumnName
+     * @param string $columnNameForSoftDelete
+     * @return string
+     */
+    protected static function oneInverseRelationshipJoinQuery($ownedRepositoryName, $joinKey, $ownerRepositoryName, $foreignKeyColumnName, $ownedEntityPrimaryColumnName, $columnNameForSoftDelete) {
+        $softDeleteClause = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
+        return "LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}] ON" . "[{$joinKey}] .[{$foreignKeyColumnName}] = [{$ownerRepositoryName}].[{$ownedEntityPrimaryColumnName}] {$softDeleteClause}";
+    }
+
+    /**
+     * @param string $ownedRepositoryName
+     * @param string $joinKey
+     * @param string $ownerRepositoryName
+     * @param string $ownerName
+     * @param string $foreignKey
+     * @param string $ownedEntityPrimaryColumnName
+     * @param string $columnNameForSoftDelete
+     * @return string
+     */
+    protected static function oneInverseDynamicRelationshipJoinQuery($ownedRepositoryName, $joinKey, $ownerRepositoryName, $ownerName, $foreignKey, $ownedEntityPrimaryColumnName, $columnNameForSoftDelete) {
+        $softDeleteClause = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
+        return "LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}] ON" . "[{$joinKey}].[{$foreignKey[0]}] = [{$ownerRepositoryName}].[{$ownedEntityPrimaryColumnName}] AND [{$joinKey}].[{$foreignKey[1]}] = '{$ownerName}'  {$softDeleteClause}";
     }
 
     /**
@@ -563,8 +621,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return string
      */
     protected static function manyViaPropertyRelationshipJoinQuery($ownedRepositoryName, $joinKey, $ownerRepositoryName, $foreignKeyColumnName, $ownedEntityPrimaryColumnName, $columnNameForSoftDelete) {
-        $softDeleteClausule = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
-        return "LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}] ON [{$joinKey}].[{$foreignKeyColumnName}] = [{$ownerRepositoryName}].[{$ownedEntityPrimaryColumnName}]{$softDeleteClausule}";
+        $softDeleteClause = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
+        return "LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}] ON [{$joinKey}].[{$foreignKeyColumnName}] = [{$ownerRepositoryName}].[{$ownedEntityPrimaryColumnName}]{$softDeleteClause}";
     }
 
     /**
@@ -588,12 +646,12 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return string
      */
     protected static function manyViaRepostioryRelationshipJoinQuery($joinKey, $connectViaRepositoryWithName, $ownerRepositoryName, $ownedRepositoryName, $ownerPrimaryPropertyColumnName, $ownedPrimaryPropertyColumnName, $columnNameForSoftDelete) {
-        $softDeleteClausule = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
+        $softDeleteClause = $columnNameForSoftDelete ? " AND [{$joinKey}].[{$columnNameForSoftDelete}] = 0" : "";
         return "LEFT JOIN [{$connectViaRepositoryWithName}]
                 ON [{$connectViaRepositoryWithName}].[{$ownerRepositoryName}]
                 = [{$ownerRepositoryName}].[{$ownerPrimaryPropertyColumnName}]
                 LEFT JOIN [{$ownedRepositoryName}] as [{$joinKey}]
                 ON [{$connectViaRepositoryWithName}].[{$ownedRepositoryName}]
-                = [{$joinKey}].[{$ownedPrimaryPropertyColumnName}]{$softDeleteClausule}";
+                = [{$joinKey}].[{$ownedPrimaryPropertyColumnName}]{$softDeleteClause}";
     }
 }
