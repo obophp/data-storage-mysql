@@ -38,6 +38,13 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     }
 
     /**
+     * @return \DibiConnection
+     */
+    public function getDibiConnection() {
+        return $this->dibiConnection;
+    }
+
+    /**
      * @param \obo\Carriers\QueryCarrier $queryCarrier
      * @param boolean $asArray
      * @return string
