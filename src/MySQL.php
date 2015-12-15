@@ -322,11 +322,16 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected function convertDataForExport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
         $convertedData = [];
         $defaultEntityInformation = $entityInformation;
+
         foreach($data as $row) {
             $convertedRow = [];
             $nullEntities = [];
             foreach ($row as $columnName => $columnValue) {
-                $parts = \explode("_", $columnName);
+                if ($defaultEntityInformation->existInformationForPropertyWithName($columnName)) {
+                    $parts = [$columnName];
+                } else {
+                    $parts = \explode("_", $columnName);
+                }
 
                 foreach ($parts as $position => $property) {
                     if ($position !== 0 AND $defaultEntityInformation->informationForPropertyWithName($parts[$position-1])->relationship !== null) {
