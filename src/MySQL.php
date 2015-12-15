@@ -305,8 +305,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $information["columns"][$propertyInformation->columnName]["propertyName"] = $propertyInformation->name;
             $information["columns"][$propertyInformation->columnName]["nullable"] = $propertyInformation->nullable;
             if ($information["columns"][$propertyInformation->columnName]["autoIncrement"] = $propertyInformation->autoIncrement) $information["autoIncrementProperty"] = $persitablePropertyName;
-            $information["columns"][$propertyInformation->columnName]["exportFilter"] = $this->dataConverter->convertFilterForCombinationCode("D" . $information["columns"][$propertyInformation->columnName]["type"] . "->O" . $propertyInformation->dataType->name());
-            $information["columns"][$propertyInformation->columnName]["importFilter"] = $this->dataConverter->convertFilterForCombinationCode("O" . $propertyInformation->dataType->name() . "->D" . $information["columns"][$propertyInformation->columnName]["type"]);
+            $information["columns"][$propertyInformation->columnName]["exportFilter"] = $this->dataConverter->convertFilterForCombinationCode("D" . $information["columns"][$propertyInformation->columnName]["type"] . "->O" . $propertyInformation->dataType->dataTypeClass());
+            $information["columns"][$propertyInformation->columnName]["importFilter"] = $this->dataConverter->convertFilterForCombinationCode("O" . $propertyInformation->dataType->dataTypeClass() . "->D" . $information["columns"][$propertyInformation->columnName]["type"]);
             $information["toPropertyName"][$propertyInformation->columnName] = $propertyInformation->name;
             $information["toColumnName"][$propertyInformation->name] = $propertyInformation->columnName;
         }

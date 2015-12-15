@@ -8,7 +8,7 @@
  * @license http://www.apache.org/licenses/LICENSE-2.0 Apache License, Version 2.0
  */
 
-namespace obo\DataStorage\Convertors;
+namespace obo\DataStorage\DataConverters;
 
 class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\Interfaces\IDataConverter {
     /**
@@ -20,31 +20,21 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
         switch ($combinationCode) {
             case "Dtinyint->Oentity":
             case "Dtinyint->Ointeger":
-            case "Dtinyint->Onumber":
             case "Dsmallint->Oentity":
             case "Dsmallint->Ointeger":
-            case "Dsmallint->Onumber":
             case "Dmediumint->Oentity":
             case "Dmediumint->Ointeger":
-            case "Dmediumint->Onumber":
             case "Dint->Oentity":
             case "Dint->Ointeger":
-            case "Dint->Onumber":
             case "Dbigint->Oentity":
             case "Dbigint->Ointeger":
-            case "Dbigint->Onumber":
-            case "Ddecimal->Onumber":
             case "Dfloat->Ofloat":
-            case "Dfloat->Onumber":
             case "Ddouble->Ofloat":
-            case "Ddouble->Onumber":
             case "Ddate->OdateTime":
             case "Ddatetime->OdateTime":
-            case "Dtimestamp->Onumber":
             case "Dtime->OdateTime":
             case "Dyear->OdateTime":
             case "Dchar->Oentity":
-            case "Dchar->Onumber":
             case "Dchar->Ostring":
             case "Dvarchar->Oentity":
             case "Dvarchar->Ostring":
@@ -53,7 +43,6 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Dmediumtext->Ostring":
             case "Dlongtext->Ostring":
             case "Denum->Oentity":
-            case "Denum->Onumber":
             case "Dtinyint->Omixed":
             case "Dsmallint->Omixed":
             case "Dmediumint->Omixed":
@@ -92,7 +81,6 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ointeger->Dtimestamp":
             case "Ointeger->Dtime":
             case "Ointeger->Denum":
-            case "Onumber->Denum":
             case "Ostring->Dchar":
             case "Ostring->Dvarchar":
             case "Ostring->Dtinytext":
@@ -132,7 +120,6 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Denum->Ofloat":
             case "Ointeger->Dfloat":
             case "Ointeger->Ddouble":
-            case "Onumber->Dfloat":
             case "Ostring->Ddecimal":
             case "Ostring->Dfloat":
             case "Ostring->Ddouble": return "toFloat";
@@ -156,14 +143,7 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ofloat->Dvarchar":
             case "Ofloat->Ddecimal":
             case "Ointeger->Dchar":
-            case "Ointeger->Dvarchar":
-            case "Onumber->Ddecimal":
-            case "Onumber->Ddouble":
-            case "Onumber->Dchar":
-            case "Ostring->Ddecimal":
-            case "Ostring->Dfloat":
-            case "Ostring->Ddouble":
-            case "Onumber->Dvarchar": return "toString";
+            case "Ointeger->Dvarchar": return "toString";
             case "Dtinyint->Oboolean":
             case "Dsmallint->Oboolean":
             case "Dmediumint->Oboolean":
@@ -191,12 +171,6 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ofloat->Dmediumint":
             case "Ofloat->Dint":
             case "Ofloat->Dbigint":
-            case "Onumber->Dtinyint":
-            case "Onumber->Dsmallint":
-            case "Onumber->Dmediumint":
-            case "Onumber->Dint":
-            case "Onumber->Dbigint":
-            case "Onumber->Dtimestamp":
             case "Ostring->Dtimestamp":
             case "Ddate->Ostring":
             case "Dtime->Ostring":
