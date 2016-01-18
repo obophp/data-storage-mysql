@@ -86,6 +86,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins) || $needDistinct;
         $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins) || $needDistinct;
 
+        $join["query"] .= \implode($joins, " ");
+
         if ("COUNT([{$repositoryName}].[{$primaryPropertyColumn}])" === $select["query"]) {
             $query .= "SELECT  COUNT(" . ($needDistinct ? "DISTINCT " : "") ."[{$repositoryName}].[{$primaryPropertyColumn}])";
         } else {
@@ -102,7 +104,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
-        $query .= implode($joins, " ");
+        if ($join["query"] !== "") {
+            $query .= $join["query"];
+            $data = \array_merge($data, $join["data"]);
+        }
 
         if ($where["query"] !== "") {
             $query .= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
