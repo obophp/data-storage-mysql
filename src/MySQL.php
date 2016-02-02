@@ -436,6 +436,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected function process($defaultEntityClassName, array &$part, array &$joins, $selectPart = false) {
         $needDistinct = false;
         $originalDefaultEntityClassName = $defaultEntityClassName;
+        $originalQuery = $part["query"];
         self::processJunctions($part["query"], $joins, $defaultEntityClassName);
         \preg_match_all("#(\{(.*?)\}\.?)+#", $part["query"], $blocks);
 
@@ -543,6 +544,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 }
             } else {
                 $defaultPropertyInformation = $defaultEntityClassName::informationForPropertyWithName($items[0]);
+                if (!$defaultPropertyInformation->persistable) throw new \obo\Exceptions\Exception("Can't use non-persistent property '{$items[0]}' of '{$defaultEntityClassName}' class in query '{$originalQuery}'");
             }
 
             $matches = [];
