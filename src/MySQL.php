@@ -88,8 +88,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         $join["query"] .= \implode($joins, " ");
 
-        if ("COUNT([{$repositoryName}].[{$primaryPropertyColumn}])" === $select["query"]) {
-            $query .= "SELECT  COUNT(" . ($needDistinct ? "DISTINCT " : "") ."[{$repositoryName}].[{$primaryPropertyColumn}])";
+        if ("COUNT([{$repositoryName}].[{$primaryPropertyColumn}])" === \trim($select["query"], " ,")) {
+            $query .= "SELECT COUNT(" . ($needDistinct ? "DISTINCT " : "") ."[{$repositoryName}].[{$primaryPropertyColumn}])";
         } else {
             $query .= "SELECT " . ($needDistinct ? "DISTINCT " : "") . rtrim($select["query"], ",");
         }
