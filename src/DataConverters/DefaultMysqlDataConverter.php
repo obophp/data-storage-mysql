@@ -108,6 +108,7 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Omixed->Dmediumtext":
             case "Omixed->Dlongtext":
             case "Denum->Ostring":
+            case "Ofloat->Ddecimal":
             case "Omixed->Denum": return null;
             case "Dtinyint->Ofloat":
             case "Dsmallint->Ofloat":
@@ -141,7 +142,6 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Oentity->Dlongtext":
             case "Ofloat->Dchar":
             case "Ofloat->Dvarchar":
-            case "Ofloat->Ddecimal":
             case "Ointeger->Dchar":
             case "Ointeger->Dvarchar": return "toString";
             case "Dtinyint->Oboolean":
