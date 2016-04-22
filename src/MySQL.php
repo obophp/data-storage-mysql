@@ -552,7 +552,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             if (isset($matches[2]) AND \strpos($matches[2], $this->parameterPlaceholder) !== false) {
                 $segment = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]", $matches[0], 1);
                 $segment = \str_replace($this->parameterPlaceholder, $this->informationForEntity($defaultPropertyInformation->entityInformation)["columns"][$defaultPropertyInformation->columnName]["placeholder"], $segment);
-                $part["query"] = \str_replace($matches[0], $segment, $part["query"]);
+                $part["query"] = \preg_replace("#" . \preg_quote($matches[0]) . "#", $segment, $part["query"], 1);
             } else {
                 $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]". ($selectPart ? " AS [{$selectItemAlias}{$defaultPropertyInformation->name}]" : ""), $part["query"], 1);
             }
