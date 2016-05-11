@@ -461,7 +461,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     if ($defaultPropertyInformation->relationship instanceof \obo\Relationships\One AND ($countItems - 1) !== $key) {
                         $entityClassNameToBeConnected = $defaultPropertyInformation->relationship->entityClassNameToBeConnected;
                         $entityInformationToBeConnected = $entityClassNameToBeConnected::entityInformation();
-                        $joinKey = "{$defaultEntityClassName}->{$entityClassNameToBeConnected}";
+                        $joinKey = "{$defaultEntityClassName}_{$defaultPropertyInformation->name}->{$entityClassNameToBeConnected}";
                         $selectItemAlias .= "{$item}_";
 
 
