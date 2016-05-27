@@ -49,7 +49,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     public function __construct(\DibiConnection $dibiConnection, \obo\DataStorage\Interfaces\IDataConverter $dataConverter, \obo\Interfaces\ICache $cache = null) {
         if ($dibiConnection->getConfig("driver") !== "mysqli" AND $dibiConnection->getConfig("driver") !== "mysql") throw new \obo\Exceptions\Exception("Wrong driver has been set for dibi connection. Mysql or mysqli driver was expected.");
         $this->dibiConnection = $dibiConnection;
-        $this->dibiTranslator = new \DibiTranslator($this->dibiConnection);
         $this->dataConverter = $dataConverter;
         $this->cache = $cache;
     }
@@ -59,6 +58,14 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     public function getDibiConnection() {
         return $this->dibiConnection;
+    }
+
+    /**
+     * @return \DibiTranslator
+     */
+    protected function getDibiTranslator() {
+        if ($this->dibiTranslator instanceof \DibiTranslator) return $this->dibiTranslator;
+        return $this->dibiTranslator = new \DibiTranslator($this->getDibiConnection());
     }
 
     /**
@@ -131,7 +138,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         if ($asArray) return \array_merge([$query], $data);
 
-        return $this->dibiTranslator->translate(\array_merge([$query], $data));
+        return $this->getDibiTranslator()->translate(\array_merge([$query], $data));
     }
 
     /**
