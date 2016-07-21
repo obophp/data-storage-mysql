@@ -16,7 +16,7 @@
     },
     "require": {
         "php": ">=5.4.0",
-        "dibi/dibi": "3.0.4",
+        "dibi/dibi": "3.0.5",
         "obo/obo": "@dev"
     }
 }
