@@ -109,6 +109,8 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Omixed->Dlongtext":
             case "Denum->Ostring":
             case "Ofloat->Ddecimal":
+            case "Dtime->OdateInterval":
+            case "OdateInterval->Dtime":
             case "Omixed->Denum": return null;
             case "Dtinyint->Ofloat":
             case "Dsmallint->Ofloat":
