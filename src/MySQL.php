@@ -579,7 +579,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             foreach($blocks[0] as $key => $block) {
                 $parts = \explode(",", $blocks[2][$key]);
                 $joinKey = "{$defaultEntityClassName}->{$parts[0]}_{$parts[1]::entityInformation()->repositoryName}";
-                $joins[$joinKey] = "INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = [{$defaultEntityClassName::entityInformation()->repositoryName}].[{$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}]";
+                $joins[$joinKey] = " INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = [{$defaultEntityClassName::entityInformation()->repositoryName}].[{$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}]";
                 $newBlock = \str_replace($blocks[1][$key], "[{$joinKey}].[{$parts[1]::entityInformation()->repositoryName}]", $block);
                 $newBlock = \str_replace($blocks[3][$key], $this->informationForEntity($parts[1]::entityInformation())["columns"][$parts[1]::informationForPropertyWithName($parts[1]::entityInformation()->primaryPropertyName)->columnName]["placeholder"], $newBlock);
                 $query = \str_replace($block, $newBlock, $query);
