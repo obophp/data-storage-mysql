@@ -223,11 +223,13 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $targetEntityPropertyNameForSoftDelete = $targetEntity::entityInformation()->propertyNameForSoftDelete;
 
         if ($targetEntityPropertyNameForSoftDelete === "") {
-            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
+            $specification->join("JOIN [{$repositoryName}] ON [{$repositoryName}].[{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$repositoryName}].[{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
         } else {
             $softDeleteJoinQuery = "AND [{$targetEntity::entityInformation()->repositoryName}].[{$targetEntity::informationForPropertyWithName($targetEntityPropertyNameForSoftDelete)->columnName}] = %b";
-            $specification->join("JOIN [{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), FALSE);
+            $specification->join("JOIN [{$repositoryName}] ON [{$repositoryName}].[{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$repositoryName}].[{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), FALSE);
         }
+
+        return $specification;
     }
 
     /**
