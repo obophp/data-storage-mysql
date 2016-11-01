@@ -241,7 +241,7 @@ class MySQLTest extends \Tester\TestCase {
         $queryCarrier = $this->createContactQueryCarrier();
         $owner = $this->getContactEntity();
         $targetEntity = $this->getAddressEntity();
-        $actualData = $this->storage->dataForEntitiesInRelationship($queryCarrier, "Address", $owner, $targetEntity);
+        $actualData = $this->storage->dataForEntitiesInRelationship($queryCarrier, static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, $owner, $targetEntity);
         Assert::equal($actualData, static::$expectedDataForQuery);
     }
 
