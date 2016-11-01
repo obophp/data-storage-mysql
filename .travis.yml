@@ -1,0 +1,42 @@
+language: php
+
+php:
+    - 5.4
+    - 5.5
+    - 5.6
+    - 7.0
+    - hhvm
+
+env:
+    global:
+        secure: A2MqbdfarhYnXh9EqiMyWIE/iFDf8Rb9H5LksNFNUJ4GXVy2dUXlYp1nrO81zMNDFyWa4gV+ZrQ5yBe7Jeb9XdoU82HcALt+QejhX2cit7LOUi/346I8gTKLg11wzXsZJ5dmn+47kQ6ibv2MGVhfmPxhasMlmaoq2ZiEZbWUL/8=
+
+matrix:
+    allow_failures:
+        - php: 7.0
+        - php: hhvm
+
+before_script:
+    # update Composer to current version, install Nette Tester & Code Checker
+    - composer self-update
+    - composer install --no-interaction --prefer-source
+    - composer create-project nette/code-checker code-checker 2.5 --no-interaction --prefer-source
+    - mysql -u root -e 'create database `obo-test`;'
+
+script:
+    - php code-checker/src/code-checker.php --short-arrays -d src/
+    - php code-checker/src/code-checker.php --short-arrays -d tests/
+    - vendor/bin/tester -p php tests/ -s
+
+after_success:
+    - if  [ $TRAVIS_PHP_VERSION = '5.6' ] && [ $TRAVIS_BRANCH = 'master' ] && [ $TRAVIS_PULL_REQUEST = 'false' ]; then bash generate-api.sh; fi
+
+dist: trusty
+sudo: required
+
+addons:
+  apt:
+    packages:
+    - mysql-server-5.6
+    - mysql-client-core-5.6
+    - mysql-client-5.6
