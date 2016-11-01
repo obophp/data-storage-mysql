@@ -78,7 +78,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $query = "";
         $data = [];
         $queryCarrier = clone $queryCarrier;
-        $joins = array();
+        $joins = [];
         $needDistinct = false;
         $entityInformation = $queryCarrier->getDefaultEntityEntityInformation();
         $repositoryName = $entityInformation->repositoryName;
