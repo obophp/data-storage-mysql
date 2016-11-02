@@ -18,13 +18,14 @@
         "classmap": ["tests/"]
     },
     "require": {
-        "php": ">=5.4.0",
+        "php": ">=5.5.0",
         "dibi/dibi": "^3.0.6",
         "obo/obo": "@dev",
         "nette/reflection": "~2.2"
     },
     "require-dev": {
         "nette/tester": "~1.3",
-        "nette/caching": "~2.2"
+        "nette/caching": "~2.2",
+        "squizlabs/php_codesniffer": "~2.5"
     }
 }
