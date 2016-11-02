@@ -22,6 +22,7 @@ before_script:
     - composer install --no-interaction --prefer-source
     - composer create-project nette/code-checker code-checker 2.5 --no-interaction --prefer-source
     - mysql -u root -e 'create database `obo-test`;'
+    - mysql -u root -e 'create database `obo-test2`;'
 
 script:
     - php code-checker/src/code-checker.php --short-arrays -d src/
