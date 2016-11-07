@@ -19,6 +19,8 @@ class ContactProperties extends \obo\EntityProperties {
 
     /**
      * @obo-dataType(string)
+     * @obo-storageName(obo-test2)
+     * @obo-repositoryName(Contacts)
      */
     public $fax = "";
 
@@ -33,7 +35,7 @@ class ContactProperties extends \obo\EntityProperties {
     public $homeAddresses;
 
     /**
-     * @obo-many(targetEntity="\obo\DataStorage\Tests\Assets\Entities\Address", connectViaRepository="RelationshipBetweenContactAndOtherAddresses", cascade = save)
+     * @obo-many(targetEntity="\obo\DataStorage\Tests\Assets\Entities\Address", connectViaRepository="obo-test2.RelationshipBetweenContactAndOtherAddresses", cascade = save)
      */
     public $otherAddresses;
 

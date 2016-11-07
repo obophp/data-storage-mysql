@@ -72,12 +72,12 @@ class MySQLTest extends \Tester\TestCase {
     /**
      * @var string
      */
-    const CONTACTS_REPOSITORY = "Contacts";
+    const CONTACTS_REPOSITORY = "obo-test.Contacts";
 
     /**
      * @var string
      */
-    const RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY = "RelationshipBetweenContactAndOtherAddresses";
+    const RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY = "obo-test2.RelationshipBetweenContactAndOtherAddresses";
 
     /**
      * @var string
@@ -184,7 +184,7 @@ class MySQLTest extends \Tester\TestCase {
 
     public function testConstructQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
-        $expectedQuery = "SELECT  `Contacts`.`id` AS `id`, `Contacts`.`email` AS `email`, `Contacts`.`phone` AS `phone`, `Contacts`.`fax` AS `fax`, `Contacts`.`address` AS `address`, `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address`.`id` AS `address_id`, `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address`.`street` AS `address_street`, `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address`.`houseNumber` AS `address_houseNumber`, `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address`.`town` AS `address_town`, `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address`.`postalCode` AS `address_postalCode` FROM `Contacts`LEFT JOIN `Address` as `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address` ON `Contacts`.`address` = `obo\DataStorage\Tests\Assets\Entities\Contact_address->obo\DataStorage\Tests\Assets\Entities\Address`.`id`";
+        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`id` AS `address_id`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`street` AS `address_street`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`town` AS `address_town`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` LEFT JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` as `obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address` ON `obo-test`.`Contacts`.`address` = `obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`id`";
         $actualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($actualQuery, $expectedQuery);
     }
@@ -246,12 +246,15 @@ class MySQLTest extends \Tester\TestCase {
     }
 
     public function testCreateRelationshipBetweenEntities() {
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 1);
         Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 1);
         $this->storage->createRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->createContactEntity(), $this->createAddressEntity()]);
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 2);
         Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 2);
     }
 
     public function testRemoveRelationshipBetweenEntities() {
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 1);
         Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 1);
         $this->storage->removeRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->getContactEntity(), $this->getAddressEntity()]);
         Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 0);
@@ -261,7 +264,7 @@ class MySQLTest extends \Tester\TestCase {
         $queryCarrier = $this->createContactQueryCarrier();
         $entityInformation = $queryCarrier->getDefaultEntityEntityInformation();
         $informationForEntity = $this->storage->informationForEntity($entityInformation);
-        Assert::equal($informationForEntity["table"], static::CONTACTS_REPOSITORY, "Repository Contacts not found");
+        Assert::true(isset($informationForEntity["storages"]["obo-test"]["repositories"]["Contacts"]) && isset($informationForEntity["storages"]["obo-test2"]["repositories"]["Contacts"]), "Repository Contacts located in storage with name obo-test and obo-test2 not found");
     }
 
     public function tearDown() {
@@ -274,7 +277,7 @@ class MySQLTest extends \Tester\TestCase {
 
         $file = __DIR__ . DIRECTORY_SEPARATOR . static::TEST_FILE_PATH;
         file_put_contents($file, $data, FILE_APPEND);
-    }
+        }
 
     public function __destruct() {
         $file = __DIR__ . DIRECTORY_SEPARATOR . static::TEST_FILE_PATH;
