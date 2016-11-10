@@ -43,4 +43,5 @@ class Storage {
         }
         return static::$dataStorage;
     }
+
 }
