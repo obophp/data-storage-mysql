@@ -11,6 +11,7 @@
 namespace obo\DataStorage\DataConverters;
 
 class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\Interfaces\IDataConverter {
+
     /**
      * @param string $combinationCode
      * @return string
@@ -111,7 +112,8 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ofloat->Ddecimal":
             case "Dtime->OdateInterval":
             case "OdateInterval->Dtime":
-            case "Omixed->Denum": return null;
+            case "Omixed->Denum":
+                return null;
             case "Dtinyint->Ofloat":
             case "Dsmallint->Ofloat":
             case "Dmediumint->Ofloat":
@@ -125,7 +127,8 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ointeger->Ddouble":
             case "Ostring->Ddecimal":
             case "Ostring->Dfloat":
-            case "Ostring->Ddouble": return "toFloat";
+            case "Ostring->Ddouble":
+                return "toFloat";
             case "Dtinyint->Ostring":
             case "Dsmallint->Ostring":
             case "Dmediumint->Ostring":
@@ -145,12 +148,14 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ofloat->Dchar":
             case "Ofloat->Dvarchar":
             case "Ointeger->Dchar":
-            case "Ointeger->Dvarchar": return "toString";
+            case "Ointeger->Dvarchar":
+                return "toString";
             case "Dtinyint->Oboolean":
             case "Dsmallint->Oboolean":
             case "Dmediumint->Oboolean":
             case "Dint->Oboolean":
-            case "Dbigint->Oboolean": return "toBoolean";
+            case "Dbigint->Oboolean":
+                return "toBoolean";
             case "Ddecimal->Ointeger":
             case "Dfloat->Ointeger":
             case "Ddouble->Ointeger":
@@ -181,11 +186,14 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Ostring->Dsmallint":
             case "Ostring->Dmediumint":
             case "Ostring->Dint":
-            case "Ostring->Dbigint": return "toInteger";
+            case "Ostring->Dbigint":
+                return "toInteger";
             case "OdateTime->Denum":
             case "OdateTime->Dchar":
-            case "OdateTime->Dvarchar":return "dateTimeToString";
-            case "Dtimestamp->OdateTime": return "timeStampToDateTime";
+            case "OdateTime->Dvarchar":
+                return "dateTimeToString";
+            case "Dtimestamp->OdateTime":
+                return "timeStampToDateTime";
             case "Dchar->Oarray":
             case "Dchar->Oobject":
             case "Dvarchar->Oarray":
@@ -197,15 +205,18 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Dmediumtext->Oarray":
             case "Dmediumtext->Oobject":
             case "Dlongtext->Oarray":
-            case "Dlongtext->Oobject": return "deserialize";
+            case "Dlongtext->Oobject":
+                return "deserialize";
             case "Dchar->OdateTime":
             case "Dvarchar->OdateTime":
             case "Ostring->Ddate":
             case "Ostring->Ddatetime":
             case "Ostring->Dtime":
             case "Denum->OdateTime":
-            case "Ostring->Dyear": return "stringToDateTime";
-            case "Dset->Oarray": return "toArray";
+            case "Ostring->Dyear":
+                return "stringToDateTime";
+            case "Dset->Oarray":
+                return "toArray";
             case "Oarray->Dchar":
             case "Oarray->Dvarchar":
             case "Oarray->Dtinytext":
@@ -217,8 +228,10 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
             case "Oobject->Dtinytext":
             case "Oobject->Dtext":
             case "Oobject->Dmediumtext":
-            case "Oobject->Dlongtext": return "serialize";
-            case "OdateTime->Dtimestamp": return "dateTimeToTimestamp";
+            case "Oobject->Dlongtext":
+                return "serialize";
+            case "OdateTime->Dtimestamp":
+                return "dateTimeToTimestamp";
 
             default:
                 throw new \obo\Exceptions\Exception("For combination {$combinationCode} does not exist filter");
