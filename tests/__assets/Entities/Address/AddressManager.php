@@ -4,6 +4,10 @@ namespace obo\DataStorage\Tests\Assets\Entities;
 
 class AddressManager extends \obo\EntityManager {
 
+    public static function constructQuery() {
+        return parent::constructQuery();
+    }
+
     /**
      * @param int|array $specification
      * @return Contact

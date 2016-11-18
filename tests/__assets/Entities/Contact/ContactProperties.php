@@ -4,16 +4,24 @@ namespace obo\DataStorage\Tests\Assets\Entities;
 
 class ContactProperties extends \obo\EntityProperties {
 
-    /** @obo-autoIncrement */
+    /**
+     * @obo-storageName(obo-test)
+     * @obo-repositoryName(Contacts)
+     * @obo-autoIncrement
+     */
     public $id = 0;
 
     /**
      * @obo-dataType(string)
+     * @obo-storageName(obo-test)
+     * @obo-repositoryName(Contacts)
      */
     public $email = "";
 
     /**
      * @obo-dataType(string)
+     * @obo-storageName(obo-test)
+     * @obo-repositoryName(Contacts)
      */
     public $phone = "";
 
@@ -26,6 +34,8 @@ class ContactProperties extends \obo\EntityProperties {
 
     /**
      * @obo-one(targetEntity="\obo\DataStorage\Tests\Assets\Entities\Address", cascade = save, eager = true)
+     * @obo-storageName(obo-test)
+     * @obo-repositoryName(Contacts)
      */
     public $address;
 

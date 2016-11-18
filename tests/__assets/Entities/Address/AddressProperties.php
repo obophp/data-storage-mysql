@@ -8,6 +8,13 @@ class AddressProperties extends \obo\EntityProperties {
     public $id = 0;
 
     /**
+     * @obo-one(targetEntity="property:ownerEntity", , cascade = "save, delete")
+     */
+    public $owner = null;
+
+    public $ownerEntity = "";
+
+    /**
      * @obo-dataType(string)
      */
     public $street = "";
@@ -26,5 +33,15 @@ class AddressProperties extends \obo\EntityProperties {
      * @obo-dataType(integer)
      */
     public $postalCode = "";
+
+    /**
+     * @obo-many(targetEntity = "\obo\DataStorage\Tests\Assets\Entities\Contact", connectViaProperty = "address")
+     */
+    public $defaultContacts = null;
+
+    /**
+     * @obo-many(targetEntity = "\obo\DataStorage\Tests\Assets\Entities\Contact", connectViaRepository = "obo-test2.RelationshipBetweenContactAndOtherAddresses")
+     */
+    public $contacts = null;
 
 }
