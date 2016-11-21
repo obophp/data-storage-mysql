@@ -731,7 +731,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                             $join = self::manyViaRepositoryRelationshipJoinQuery(
                                 $joinKey, //$joinKey
                                 $defaultPropertyInformation->relationship->connectViaRepositoryWithName, //$connectViaRepositoryWithName
-                                $this->getStorageNameForEntity($defaultPropertyInformation),
+                                $this->getStorageNameForProperty($defaultPropertyInformation),
                                 $defaultEntityInformation->repositoryName, //$ownerRepositoryName
                                 $this->getStorageNameForEntity($entityInformationToBeConnected),
                                 $entityInformationToBeConnected->repositoryName, //$ownedRepositoryName
@@ -784,14 +784,22 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         if (\preg_match_all("#(\{\*([A-Za-z0-9_\.\-]+?\,[A-Za-z0-9\\\_]+?)\*\})\ *?=\ *?(" . \preg_quote(\obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER) . ")#", $query, $blocks)) {
             foreach ($blocks[0] as $key => $block) {
                 $parts = \explode(",", $blocks[2][$key]);
+
+                $defaultEntityInformation = $defaultEntityClassName::entityInformation();
+                $defaultEntityStorageName = $this->getStorageNameForEntity($defaultEntityInformation);
                 $entityInformation = $parts[1]::entityInformation();
-                $propertyInformation = $defaultEntityClassName::informationForPropertyWithName($entityInformation->primaryPropertyName);
-                $entityStorageName = $this->getStorageNameForproperty($propertyInformation);
+                $propertyInformation = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName);
+                $propertyStorageName = $this->getStorageNameForProperty($propertyInformation);
+
                 $parts0 = str_replace(".", "_", $parts[0]);
-                $joinKey = "{$defaultEntityClassName}->{$parts0}_{$entityStorageName}_{$entityInformation->repositoryName}";
-                $joins[$joinKey] = " INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = [{$defaultEntityClassName::entityInformation()->repositoryName}].[{$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}]";
+                $joinKey = "{$defaultEntityClassName}->{$parts0}_{$propertyStorageName}_{$entityInformation->repositoryName}";
+                $joins[$joinKey] = " INNER JOIN [{$parts[0]}] AS [{$joinKey}] ON [{$joinKey}].[{$defaultEntityClassName::entityInformation()->repositoryName}] = [{$defaultEntityStorageName}].[{$defaultEntityClassName::entityInformation()->repositoryName}].[{$defaultEntityClassName::informationForPropertyWithName($defaultEntityClassName::entityInformation()->primaryPropertyName)->columnName}]";
                 $newBlock = \str_replace($blocks[1][$key], "[{$joinKey}].[{$entityInformation->repositoryName}]", $block);
-                $newBlock = \str_replace($blocks[3][$key], $this->informationForEntity($entityInformation)["storages"][$entityStorageName]["repositories"][$entityInformation->repositoryName]["columns"][$parts[1]::informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName]["placeholder"], $newBlock);
+                $newBlock = \str_replace(
+                    $blocks[3][$key],
+                    $this->informationForEntity($entityInformation)["storages"][$propertyStorageName]["repositories"][$entityInformation->repositoryName]["columns"][$propertyInformation->columnName]["placeholder"],
+                    $newBlock
+                );
                 $query = \str_replace($block, $newBlock, $query);
             }
         }
@@ -802,10 +810,15 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $entityStorageName = $this->getStorageNameForEntity($entityInformation);
             $entityRepositoryName = $entityInformation->repositoryName;
             foreach ($entityInformation->propertiesInformation as $propertyInformation) {
-                $storageName = $this->getStorageNameForProperty($propertyInformation);
-                if (!$propertyInformation->repositoryName) continue;
-                $joinKey = "{$entityRepositoryName}->{$propertyInformation->repositoryName}";
-                $joins = [$joinKey => " LEFT JOIN [{$storageName}].[{$propertyInformation->repositoryName}] ON [{$storageName}].[{$propertyInformation->repositoryName}].[{$primaryPropertyColumn}] = [{$entityStorageName}].[{$entityRepositoryName}].[{$primaryPropertyColumn}]"] + $joins;
+                $propertyStorageName = $this->getStorageNameForProperty($propertyInformation);
+                if (!$propertyInformation->repositoryName) {
+                    continue;
+                }
+                if (($propertyStorageName === $entityStorageName) && ($entityRepositoryName === $propertyInformation->repositoryName)) {
+                    continue;
+                }
+                $joinKey = "{$entityStorageName}->{$propertyStorageName}->{$entityRepositoryName}->{$propertyInformation->repositoryName}";
+                $joins = [$joinKey => " LEFT JOIN [{$propertyStorageName}].[{$propertyInformation->repositoryName}] ON [{$propertyStorageName}].[{$propertyInformation->repositoryName}].[{$primaryPropertyColumn}] = [{$entityStorageName}].[{$entityRepositoryName}].[{$primaryPropertyColumn}]"] + $joins;
             }
         }
     }
