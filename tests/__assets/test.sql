@@ -22,7 +22,6 @@ CREATE TABLE `obo-test`.`PersonalContacts` (
 
 INSERT INTO `obo-test`.`PersonalContacts` (`id`, `firstname`, `surname`) VALUES (1, 'John', 'Doe');
 INSERT INTO `obo-test`.`PersonalContacts` (`id`, `firstname`, `surname`) VALUES (2, 'John', 'Doe');
-INSERT INTO `obo-test`.`PersonalContacts` (`id`, `firstname`, `surname`) VALUES (3, 'John', 'Doe');
 
 
 DROP TABLE IF EXISTS `obo-test`.`BusinessContacts`;
@@ -44,7 +43,6 @@ CREATE TABLE `obo-test2`.`Contacts` (
 
 INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (1, '+420987654321');
 INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (2, '+420987654321');
-INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (3, '+420987654321');
 
 
 DROP TABLE IF EXISTS `obo-test2`.`Address`;
