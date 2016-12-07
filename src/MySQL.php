@@ -18,9 +18,9 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     const PROCESS_JOIN = "join";
 
     /**
-     * @var \DibiConnection
+     * @var \obo\DataStorage\Connection
      */
-    protected $dibiConnection = null;
+    protected $connection = null;
 
     /**
      * @var \DibiTranslator
@@ -53,28 +53,29 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected $parameterPlaceholder = \obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER;
 
     /**
-     * @param \DibiConnection $dibiConnection
+     * @param \obo\DataStorage\Connection $connection
      * @param \obo\DataStorage\Interfaces\IDataConverter $dataConverter
      * @param \obo\Interfaces\ICache $cache
      * @throws \obo\Exceptions\Exception
      */
-    public function __construct(\DibiConnection $dibiConnection, \obo\DataStorage\Interfaces\IDataConverter $dataConverter, \obo\Interfaces\ICache $cache = null) {
-        if ($dibiConnection->getConfig("driver") !== "mysqli" AND $dibiConnection->getConfig("driver") !== "mysql") throw new \obo\Exceptions\Exception("Wrong driver has been set for dibi connection. Mysql or mysqli driver was expected.");
-        $this->dibiConnection = $dibiConnection;
+    public function __construct(\obo\DataStorage\Connection $connection, \obo\DataStorage\Interfaces\IDataConverter $dataConverter, \obo\Interfaces\ICache $cache = null) {
+        if ($connection->getConfig("driver") !== "mysqli" AND $connection->getConfig("driver") !== "mysql") throw new \obo\Exceptions\Exception("Wrong driver has been set for dibi connection. Mysql or mysqli driver was expected.");
+        $this->connection = $connection;
         $this->dataConverter = $dataConverter;
         $this->cache = $cache;
 
-        if ($this->dibiConnection->getConfig("database") === null) {
+        if ($this->connection->getConfig("database") === null) {
             throw new \obo\Exceptions\Exception("No database is selected for the current connection.");
         }
-        $this->defaultStorageName = $this->dibiConnection->getConfig("database");
+
+        $this->defaultStorageName = $this->connection->getDefaultStorageName();
     }
 
     /**
-     * @return \DibiConnection
+     * @return \obo\DataStorage\Connection
      */
-    public function getDibiConnection() {
-        return $this->dibiConnection;
+    public function getConnection() {
+        return $this->connection;
     }
 
     /**
@@ -82,16 +83,17 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     protected function getDibiTranslator() {
         if ($this->dibiTranslator instanceof \DibiTranslator) return $this->dibiTranslator;
-        return $this->dibiTranslator = new \DibiTranslator($this->getDibiConnection());
+        return $this->dibiTranslator = new \DibiTranslator($this->getConnection());
     }
 
     /**
      * @param \obo\Carriers\EntityInformationCarrier $entityInformation
      * @return string
+     * @throws \InvalidArgumentException
      */
     protected function getStorageNameForEntity(\obo\Carriers\EntityInformationCarrier $entityInformation) {
         if (!empty($entityInformation->storageName)) {
-            return $entityInformation->storageName;
+            return $this->connection->getStorageNameByAlias($entityInformation->storageName);
         }
 
         return $this->defaultStorageName;
@@ -100,10 +102,11 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     /**
      * @param \obo\Carriers\PropertyInformationCarrier $propertyInformation
      * @return string
+     * @throws \InvalidArgumentException
      */
     protected function getStorageNameForProperty(\obo\Carriers\PropertyInformationCarrier $propertyInformation) {
         if (!empty($propertyInformation->storageName)) {
-            return $propertyInformation->storageName;
+            return $this->connection->getStorageNameByAlias($propertyInformation->storageName);
         }
 
         return $this->getStorageNameForEntity($propertyInformation->entityInformation);
@@ -217,7 +220,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return array
      */
     public function dataForQuery(\obo\Carriers\QueryCarrier $queryCarrier) {
-        return $this->convertDataForExport($this->dibiConnection->fetchAll($this->constructQuery($queryCarrier, true)), $queryCarrier->getDefaultEntityEntityInformation());
+        return $this->convertDataForExport($this->connection->fetchAll($this->constructQuery($queryCarrier, true)), $queryCarrier->getDefaultEntityEntityInformation());
     }
 
     /**
@@ -232,7 +235,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         $primaryPropertyColumn = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName;
         $queryCarrier->rewriteSelect("COUNT([{$storageName}].[{$repositoryName}].[{$primaryPropertyColumn}])");
-        return (int) $this->dibiConnection->fetchSingle($this->constructQuery($queryCarrier, true));
+        return (int) $this->connection->fetchSingle($this->constructQuery($queryCarrier, true));
     }
 
     /**
@@ -248,18 +251,18 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $repositoryName = $entityInformation->repositoryName;
         $primaryPropertyColumnName = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName;
 
-        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->dibiConnection->begin();
+        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->begin();
         $lastInsertId = null;
 
         foreach ($convertedData as $storageName => $storageData) {
             foreach ($storageData as $repositoryName => $data) {
                 if ($lastInsertId) $repositoryData[$primaryPropertyColumnName] = $lastInsertId;
-                $this->dibiConnection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", $data);
-                if (!$lastInsertId) $lastInsertId = $this->dibiConnection->getInsertId();
+                $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", $data);
+                if (!$lastInsertId) $lastInsertId = $this->connection->getInsertId();
             }
         }
 
-        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->dibiConnection->commit();
+        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->commit();
         if ($entity->entityInformation()->informationForPropertyWithName($entity->entityInformation()->primaryPropertyName)->autoIncrement) $entity->setValueForPropertyWithName($lastInsertId, $entity->entityInformation()->primaryPropertyName);
     }
 
@@ -276,15 +279,15 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $primaryPropertyPlaceholder = $informationForEntity["storages"][$entityStorageName]["repositories"][$entity->entityInformation()->repositoryName]["columns"][$primaryPropertyColumnName]["placeholder"];
         $changedProperties = $entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true);
         $convertedData = $this->convertDataForImport($changedProperties, $entity->entityInformation());
-        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->dibiConnection->begin();
+        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->begin();
 
         foreach ($convertedData as $storageName => $storageData) {
             foreach ($storageData as $repositoryName => $data) {
-                $this->dibiConnection->query("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
+                $this->connection->query("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
             }
         }
 
-        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->dibiConnection->commit();
+        if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->commit();
     }
 
     /**
@@ -298,15 +301,15 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $entityStorageName = $this->getStorageNameForEntity($entityInformation);
         $primaryPropertyPlaceholder = $informationForEntity["storages"][$entityStorageName]["repositories"][$entity->entityInformation()->repositoryName]["columns"][$primaryPropertyColumnName]["placeholder"];
         $convertedData = $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation());
-        if (count($informationForEntity["storages"][$entityStorageName]["repositories"]) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->dibiConnection->begin();
+        if (count($informationForEntity["storages"][$entityStorageName]["repositories"]) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->begin();
 
         foreach ($convertedData as $storageName => $storageData) {
             foreach ($storageData as $repositoryName => $data) {
-                $this->dibiConnection->query("DELETE FROM [{$storageName}].[{$repositoryName}] WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder} LIMIT 1", $entity->primaryPropertyValue());
+                $this->connection->query("DELETE FROM [{$storageName}].[{$repositoryName}] WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder} LIMIT 1", $entity->primaryPropertyValue());
             }
         }
 
-        if (count($informationForEntity["storages"][$entityStorageName]["repositories"]) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->dibiConnection->commit();
+        if (count($informationForEntity["storages"][$entityStorageName]["repositories"]) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->commit();
     }
 
     /**
@@ -374,7 +377,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         $entityInformation = $entity->entityInformation();
         $informationForEntity = $this->informationForEntity($entityInformation);
-        $this->dibiConnection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$entities[0]->entityInformation()->repositoryName => $entities[0]->primaryPropertyValue(), $entities[1]->entityInformation()->repositoryName => $entities[1]->primaryPropertyValue()]);
+        $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$entities[0]->entityInformation()->repositoryName => $entities[0]->primaryPropertyValue(), $entities[1]->entityInformation()->repositoryName => $entities[1]->primaryPropertyValue()]);
     }
 
     /**
@@ -396,7 +399,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             }
         }
 
-        $this->dibiConnection->query("DELETE FROM [{$repositoryStorageName}].[{$repositoryRepositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = " . $this->informationForEntity($entities[1]->entityInformation())["storages"][$this->getStorageNameForEntity($entities[1]->entityInformation())]["repositories"][$entities[1]->entityInformation()->repositoryName]["columns"][$entities[1]->entityInformation()->informationForPropertyWithName($entities[1]->entityInformation()->primaryPropertyName)->columnName]["placeholder"], $entities[1]->primaryPropertyValue());
+        $this->connection->query("DELETE FROM [{$repositoryStorageName}].[{$repositoryRepositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = " . $this->informationForEntity($entities[1]->entityInformation())["storages"][$this->getStorageNameForEntity($entities[1]->entityInformation())]["repositories"][$entities[1]->entityInformation()->repositoryName]["columns"][$entities[1]->entityInformation()->informationForPropertyWithName($entities[1]->entityInformation()->primaryPropertyName)->columnName]["placeholder"], $entities[1]->primaryPropertyValue());
     }
 
     /**
@@ -480,7 +483,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param array $information
      */
     protected function loadColumnsForRepository($storageName, $repositoryName, array &$information) {
-        foreach ($this->dibiConnection->fetchAll("SHOW COLUMNS FROM [{$storageName}].[{$repositoryName}]") as $row) {
+        foreach ($this->connection->fetchAll("SHOW COLUMNS FROM [{$storageName}].[{$repositoryName}]") as $row) {
             $information["storages"][$storageName]["repositories"][$repositoryName]["columns"][$row->Field] = [
                 "field" => $row->Field,
                 "type" => $type = preg_replace("#[^a-z]+.*$#", "", $row->Type),
@@ -499,7 +502,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param array $information
      */
     protected function loadStatusForRepository($storageName, $repositoryName, array &$information) {
-        $information["storages"][$storageName]["repositories"][$repositoryName]["status"] = $this->dibiConnection->fetch("SHOW TABLE STATUS FROM [{$storageName}] WHERE [name] = %s", $repositoryName)->toArray();
+        $information["storages"][$storageName]["repositories"][$repositoryName]["status"] = $this->connection->fetch("SHOW TABLE STATUS FROM [{$storageName}] WHERE [name] = %s", $repositoryName)->toArray();
     }
 
     /**
@@ -582,7 +585,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return boolean
      */
     protected function existsRepositoryWithName($storageName, $repositoryName) {
-        return (boolean) $this->dibiConnection->fetchSingle("SHOW TABLES FROM %n LIKE %s;", $storageName, $repositoryName);
+        return (boolean) $this->connection->fetchSingle("SHOW TABLES FROM %n LIKE %s;", $storageName, $repositoryName);
     }
 
     protected function placeholderForColumnType($columnType) {
