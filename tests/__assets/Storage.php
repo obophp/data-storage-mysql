@@ -9,12 +9,16 @@ class Storage {
      */
     private static $config = [
         "host" => "127.0.0.1",
-        "database" => "obo-test",
-        "username" => "root"
+        "defaultDatabase" => "testDb",
+        "username" => "root",
+        "databases" => [
+            "testDb" => "obo-test",
+            "testDb2" => "obo-test2"
+        ]
     ];
 
     /**
-     * @var \Dibi\Connection
+     * @var \obo\Interfaces\IConnection
      */
     private static $connection = null;
 
@@ -25,11 +29,11 @@ class Storage {
     private static $dataStorage = null;
 
     /**
-     * @return \Dibi\Connection
+     * @var \obo\Interfaces\IConnection
      */
     public static function getConnection() {
         if (static::$connection === null) {
-            static::$connection = new \Dibi\Connection(static::$config);
+            static::$connection = new \obo\DataStorage\Connection(static::$config);
         }
         return static::$connection;
     }
