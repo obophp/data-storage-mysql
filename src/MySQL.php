@@ -744,6 +744,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     $entityInformationToBeConnected = $entityClassNameToBeConnected::entityInformation();
                     $ownedStorageName = $this->getStorageNameForEntity($entityInformationToBeConnected);
                     $ownedRepositoryName = $entityInformationToBeConnected->repositoryName;
+                    $ownedEntityPrimaryColumnName = $defaultEntityClassName::informationForPropertyWithName($defaultEntityInformation->primaryPropertyName)->columnName;
                     $ownerJoinKeyPart = $this->createJoinKeyPart($ownerStorageName, $ownerRepositoryName, $ownerColumnName);
                     $ownedJoinKeyPart = null;
 
