@@ -718,6 +718,9 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @throws \obo\Exceptions\AutoJoinException
      */
     protected function process($defaultEntityClassName, array &$part, array &$joins, $type) {
+//        if ($defaultEntityClassName === \Models\BusinessSubject::class) {
+//            //\barDump($type === static::PROCESS_JOIN);
+//        }
         $needDistinct = false;
         $originalDefaultEntityClassName = $defaultEntityClassName;
         self::processJunctions($part["query"], $joins, $defaultEntityClassName, $type);
