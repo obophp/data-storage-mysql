@@ -190,6 +190,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins, self::PROCESS_ORDER_BY) || $needDistinct;
         $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins, self::PROCESS_JOIN) || $needDistinct;
 
+
         $join["query"] .= \implode($joins, " ");
 
         if ("COUNT([{$storageName}].[{$repositoryName}].[{$primaryPropertyColumn}])" === \trim($select["query"], " ,")) {
@@ -207,7 +208,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
-        $query .= implode($joins, " ");
+        if ($join["query"] !== ""){
+            $query .= $join["query"];
+            $data = \array_merge($data, $join["data"]);
+        }
 
         if ($where["query"] !== "") {
             $query .= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
@@ -919,6 +923,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $defaultEntityPrimaryPropertyColumnName = $defaultEntityPrimaryPropertyInformation->columnName;
         $defaultEntityJoinPart = $this->createJoinKeyPart($defaultEntityStorageName, $defaultEntityRepositoryName, $defaultEntityPrimaryPropertyInformation->columnName);
 
+
+
         if (\preg_match_all("#(\{\*([A-Za-z0-9_\.\-]+?\,[A-Za-z0-9\\\_]+?)\*\})\ *?=\ *?(" . \preg_quote(\obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER) . ")#", $query, $blocks)) {
             foreach ($blocks[0] as $key => $block) {
                 $parts = \explode(",", $blocks[2][$key]);
@@ -947,16 +953,14 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         if ($type === self::PROCESS_WHERE) {
             foreach ($defaultEntityInformation->propertiesInformation as $propertyInformation) {
                 $propertyStorageName = $this->getStorageNameForProperty($propertyInformation);
-                if (!$propertyInformation->repositoryName) {
-                    continue;
-                }
-                if (($propertyStorageName === $defaultEntityStorageName) && ($defaultEntityRepositoryName === $propertyInformation->repositoryName)) {
+                $propertyRepositoryName = (!empty($propertyInformation->repositoryName)) ? $propertyInformation->repositoryName : $propertyInformation->entityInformation->repositoryName;
+                if (($propertyStorageName === $defaultEntityStorageName) && ($defaultEntityRepositoryName === $propertyRepositoryName)) {
                     continue;
                 }
                 $connectedEntityJoinPart = $this->createJoinKeyPart($propertyStorageName, $propertyInformation->repositoryName, $defaultEntityPrimaryPropertyColumnName);
                 $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, static::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joins = [$joinKeyAlias => " INNER JOIN [{$propertyStorageName}].[{$propertyInformation->repositoryName}] ON [{$propertyStorageName}].[{$propertyInformation->repositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
+                $joins = [$joinKeyAlias => " INNER JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
             }
         }
     }
