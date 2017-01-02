@@ -9,7 +9,7 @@ CREATE TABLE `obo-test`.`Contacts` (
 
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (1, 'john@doe.com', '+420123456789', 1);
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (2, 'john@doe.com', '+420123456789', 1);
-INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (3, 'john@doe.com', '+420123456789', 1);
+INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (3, 'john@doe.com', '+420123456789', 2);
 
 
 DROP TABLE IF EXISTS `obo-test`.`PersonalContacts`;
@@ -58,8 +58,8 @@ CREATE TABLE `obo-test2`.`Address` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (1, 1, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal', 'My Street', '123', 'My Town', '12345');
-INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (2, 2, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal', 'My Street', '123', 'My Town', '12345');
-INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (3, 3, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Company', 'My Street', '123', 'My Town', '12345');
+INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (2, 1, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal', 'My Street', '123', 'My Town', '12345');
+INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (3, 2, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Company', 'My Street', '123', 'My Town', '12345');
 
 DROP TABLE IF EXISTS `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`;
 CREATE TABLE `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (
@@ -68,5 +68,5 @@ CREATE TABLE `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 INSERT INTO `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (`Contacts`, `Address`) VALUES (1, 1);
-INSERT INTO `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (`Contacts`, `Address`) VALUES (2, 2);
-INSERT INTO `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (`Contacts`, `Address`) VALUES (3, 3);
+INSERT INTO `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (`Contacts`, `Address`) VALUES (1, 2);
+INSERT INTO `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (`Contacts`, `Address`) VALUES (2, 3);
