@@ -9,7 +9,7 @@ class BusinessManager extends \obo\DataStorage\Tests\Assets\Entities\ContactMana
      * @return Contact
      * @throws \obo\Exceptions\EntityNotFoundException
      */
-    public static function contact($specification) {
+    public static function business($specification) {
         return parent::entity($specification);
     }
 

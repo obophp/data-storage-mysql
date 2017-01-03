@@ -31,8 +31,16 @@ CREATE TABLE `obo-test`.`BusinessContacts` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-INSERT INTO `obo-test`.`BusinessContacts` (`id`, `companyName`) VALUES (1, 'My company s.r.o.');
+INSERT INTO `obo-test`.`BusinessContacts` (`id`, `companyName`) VALUES (3, 'My company s.r.o.');
 
+DROP TABLE IF EXISTS `obo-test`.`ExtendedBusinessContacts`;
+CREATE TABLE `obo-test`.`ExtendedBusinessContacts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `executiveOfficer` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+INSERT INTO `obo-test`.`ExtendedBusinessContacts` (`id`, `executiveOfficer`) VALUES (3, 'John Smith');
 
 DROP TABLE IF EXISTS `obo-test2`.`Contacts`;
 CREATE TABLE `obo-test2`.`Contacts` (
@@ -57,9 +65,9 @@ CREATE TABLE `obo-test2`.`Address` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (1, 1, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal', 'My Street', '123', 'My Town', '12345');
-INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (2, 1, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal', 'My Street', '123', 'My Town', '12345');
-INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (3, 2, 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Company', 'My Street', '123', 'My Town', '12345');
+INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (1, 1, 'PersonalContact', 'My Street', '123', 'My Town', '12345');
+INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (2, 1, 'PersonalContact', 'My Street', '123', 'My Town', '12345');
+INSERT INTO `obo-test2`.`Address` (`id`, `owner`, `ownerEntity`, `street`, `houseNumber`, `town`, `postalCode`) VALUES (3, 2, 'BusinessContact', 'My Street', '123', 'My Town', '12345');
 
 DROP TABLE IF EXISTS `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`;
 CREATE TABLE `obo-test2`.`RelationshipBetweenContactAndOtherAddresses` (

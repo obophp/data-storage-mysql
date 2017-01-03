@@ -33,19 +33,19 @@ class ContactProperties extends \obo\EntityProperties {
     public $fax = "";
 
     /**
-     * @obo-one(targetEntity="\obo\DataStorage\Tests\Assets\Entities\Address", cascade = save, eager = true)
+     * @obo-one(targetEntity="Address", cascade = save, eager = true)
      * @obo-storageName(testDb)
      * @obo-repositoryName(Contacts)
      */
     public $address;
 
     /**
-     * @obo-many(targetEntity="\obo\DataStorage\Tests\Assets\Entities\Address", connectViaProperty="id", cascade = save)
+     * @obo-many(targetEntity="Address", connectViaProperty="id", cascade = save)
      */
     public $homeAddresses;
 
     /**
-     * @obo-many(targetEntity="\obo\DataStorage\Tests\Assets\Entities\Address", connectViaRepository="obo-test2.RelationshipBetweenContactAndOtherAddresses", cascade = save)
+     * @obo-many(targetEntity="Address", connectViaRepository="obo-test2.RelationshipBetweenContactAndOtherAddresses", cascade = save)
      */
     public $otherAddresses;
 

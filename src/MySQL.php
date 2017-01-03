@@ -732,9 +732,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @throws \obo\Exceptions\AutoJoinException
      */
     protected function process($defaultEntityClassName, array &$part, array &$joins, $type) {
-//        if ($defaultEntityClassName === \Models\BusinessSubject::class) {
-//            //\barDump($type === static::PROCESS_JOIN);
-//        }
         $needDistinct = false;
         $originalDefaultEntityClassName = $defaultEntityClassName;
         self::processJunctions($part["query"], $joins, $defaultEntityClassName, $type);
@@ -935,7 +932,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected function processJunctions(&$query, array &$joins, $defaultEntityClassName, $type) {
         $defaultEntityInformation = $defaultEntityClassName::entityInformation();
         $defaultEntityInformationOboName = $defaultEntityInformation->name;
-        var_dump($defaultEntityClassName . "-" . $defaultEntityInformationOboName);
         $defaultEntityStorageName = $this->getStorageNameForEntity($defaultEntityInformation);
         $defaultEntityRepositoryName = $defaultEntityInformation->repositoryName;
         $defaultEntityPrimaryPropertyInformation = $defaultEntityInformation->informationForPropertyWithName($defaultEntityInformation->primaryPropertyName);
@@ -945,7 +941,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         if (\preg_match_all("#(\{\*([A-Za-z0-9_\.\-]+?\,[A-Za-z0-9\\\_]+?)\*\})\ *?=\ *?(" . \preg_quote(\obo\Interfaces\IQuerySpecification::PARAMETER_PLACEHOLDER) . ")#", $query, $blocks)) {
             foreach ($blocks[0] as $key => $block) {
                 $parts = \explode(",", $blocks[2][$key]);
-
                 $connectedEntityClassName = $parts[1];
                 $connectedEntityInformation = $connectedEntityClassName::entityInformation();
                 $connectedEntityStorageName = $this->getStorageNameForEntity($connectedEntityInformation);
@@ -956,7 +951,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $connectedEntityJoinPart = $this->createJoinKeyPart($connectedEntityStorageName, $connectedEntityInformation->repositoryName, $connectedEntityPrimaryPropertyInformation->columnName);
                 $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, static::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joins[$joinKeyAlias] = " InnER JOIN [{$parts[0]}] AS [{$joinKeyAlias}] ON [{$joinKeyAlias}].[{$defaultEntityRepositoryName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyInformation->columnName}]";
+                $joins[$joinKeyAlias] = " INNER JOIN [{$parts[0]}] AS [{$joinKeyAlias}] ON [{$joinKeyAlias}].[{$defaultEntityRepositoryName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyInformation->columnName}]";
                 $newBlock = \str_replace($blocks[1][$key], "[{$joinKeyAlias}].[{$connectedEntityInformation->repositoryName}]", $block);
                 $newBlock = \str_replace(
                     $blocks[3][$key],
@@ -977,7 +972,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $connectedEntityJoinPart = $this->createJoinKeyPart($propertyStorageName, $propertyInformation->repositoryName, $defaultEntityPrimaryPropertyColumnName);
                 $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, static::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joins = [$joinKeyAlias => " InnER JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
+                \var_dump($propertyInformation->name . " - " . $propertyInformation->oboName . " - " . $defaultEntityInformation->name . " - " . $defaultEntityInformation->className . " - " . $propertyInformation->entityInformation->className);
+                //\var_dump($propertyInformation->name . " - " . $defaultEntityInformation->name . " - " . $defaultEntityInformation->className);
+
+                $joins = [$joinKeyAlias => " LEFT JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
             }
         }
     }
