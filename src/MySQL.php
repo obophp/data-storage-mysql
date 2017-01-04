@@ -972,10 +972,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $connectedEntityJoinPart = $this->createJoinKeyPart($propertyStorageName, $propertyInformation->repositoryName, $defaultEntityPrimaryPropertyColumnName);
                 $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, static::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                \var_dump($propertyInformation->name . " - " . $propertyInformation->oboName . " - " . $defaultEntityInformation->name . " - " . $defaultEntityInformation->className . " - " . $propertyInformation->entityInformation->className);
-                //\var_dump($propertyInformation->name . " - " . $defaultEntityInformation->name . " - " . $defaultEntityInformation->className);
-
-                $joins = [$joinKeyAlias => " LEFT JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
+                $joinType = ($defaultEntityInformation->sameNameAsParent) ? "LEFT" : "INNER";
+                $joins = [$joinKeyAlias => " {$joinType} JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
             }
         }
     }
