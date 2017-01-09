@@ -391,7 +391,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $ownerJoinKeyPart = $this->createJoinKeyPart($storageName, $repositoryName, $ownerRepositoryName);
         $targetJoinKeyPart = $this->createJoinKeyPart($targetEntityStorageName, $targetEntityRepositoryName, $ownerPrimaryColumnName);
         $joinKeyAlias = $this->createJoinKeyAlias($ownerJoinKeyPart, $targetJoinKeyPart, static::JOIN_TYPE_INNER);
-        
+
         if ($targetEntityPropertyNameForSoftDelete === "") {
             $specification->join("INNER JOIN [{$storageName}].[{$repositoryName}] ON [{$storageName}].[{$repositoryName}].[{$ownerRepositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$ownerRepositoryName]["columns"][$ownerPrimaryColumnName]["placeholder"] ." AND [{$storageName}].[{$repositoryName}].[{$ownerRepositoryName}] = [{$targetPrimaryColumnName}]", $owner->primaryPropertyValue());
         } else {
@@ -574,6 +574,12 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     if ($position !== 0 AND $defaultEntityInformation->informationForPropertyWithName($parts[$position - 1])->relationship !== null) {
                         $connectedEntity = $defaultEntityInformation->informationForPropertyWithName($parts[$position - 1])->relationship->entityClassNameToBeConnected;
                         $defaultEntityInformation = $connectedEntity::entityInformation();
+                    }
+                    if ($defaultEntityInformation->primaryPropertyName === $property AND $columnValue === null){
+                        \barDump($defaultEntityInformation);
+                        \barDump($property);
+                        \barDump($columnValue);
+                        \barDump($data);
                     }
 
                     if ($defaultEntityInformation->primaryPropertyName === $property AND $columnValue === null) $nullEntities[$parts[$position - 1]] = $parts[$position - 1];
@@ -977,9 +983,9 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                     continue;
                 }
                 $connectedEntityJoinPart = $this->createJoinKeyPart($propertyStorageName, $propertyInformation->repositoryName, $defaultEntityPrimaryPropertyColumnName);
-                $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, static::JOIN_TYPE_INNER);
+                $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, $propertyInformation->declaringClassOboNameSameAsParent ? static::JOIN_TYPE_INNER : static::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joinType = ($defaultEntityInformation->sameNameAsParent) ? "LEFT" : "INNER";
+                $joinType = ($propertyInformation->declaringClassOboNameSameAsParent) ? "LEFT" : "INNER";
                 $joins = [$joinKeyAlias => " {$joinType} JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
             }
         }
