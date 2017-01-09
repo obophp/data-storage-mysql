@@ -318,7 +318,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $affectedRowsCount = $this->connection->query("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
                 if ($affectedRowsCount == 0) {
                     $recordsCount = $this->connection->query("SELECT COUNT([{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}]) FROM [{$storageName}].[{$repositoryName}] WHERE [{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue())->fetchSingle();
-                    if ($recordsCount === FALSE) {
+                    if ($recordsCount === FALSE || $recordsCount === 0) {
                         $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$primaryPropertyColumnName => $entity->primaryPropertyValue()]);
                         $this->connection->query("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
                     }
