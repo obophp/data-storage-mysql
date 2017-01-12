@@ -190,7 +190,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $orderBy, $joins, self::PROCESS_ORDER_BY) || $needDistinct;
         $needDistinct = $this->process($queryCarrier->getDefaultEntityClassName(), $join, $joins, self::PROCESS_JOIN) || $needDistinct;
 
-
         $join["query"] .= \implode($joins, " ");
 
         if ("COUNT([{$storageName}].[{$repositoryName}].[{$primaryPropertyColumn}])" === \trim($select["query"], " ,")) {
@@ -208,7 +207,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
-        if ($join["query"] !== ""){
+        if ($join["query"] !== "") {
             $query .= $join["query"];
             $data = \array_merge($data, $join["data"]);
         }
@@ -575,7 +574,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                         $connectedEntity = $defaultEntityInformation->informationForPropertyWithName($parts[$position - 1])->relationship->entityClassNameToBeConnected;
                         $defaultEntityInformation = $connectedEntity::entityInformation();
                     }
-                    if ($defaultEntityInformation->primaryPropertyName === $property AND $columnValue === null){
+                    if ($defaultEntityInformation->primaryPropertyName === $property AND $columnValue === null) {
                         \barDump($defaultEntityInformation);
                         \barDump($property);
                         \barDump($columnValue);
@@ -982,13 +981,32 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 if (($propertyStorageName === $defaultEntityStorageName) && ($defaultEntityRepositoryName === $propertyRepositoryName)) {
                     continue;
                 }
+
                 $connectedEntityJoinPart = $this->createJoinKeyPart($propertyStorageName, $propertyInformation->repositoryName, $defaultEntityPrimaryPropertyColumnName);
-                $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, $propertyInformation->declaringClassOboNameSameAsParent ? static::JOIN_TYPE_INNER : static::JOIN_TYPE_INNER);
+                $joinType = ($this->isParentEntityNameSame($propertyInformation)) ? "LEFT" : "INNER";
+                $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, ($joinType == "LEFT") ? self::JOIN_TYPE_LEFT : self::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joinType = ($propertyInformation->declaringClassOboNameSameAsParent) ? "LEFT" : "INNER";
                 $joins = [$joinKeyAlias => " {$joinType} JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
             }
         }
+    }
+
+    /**
+     *
+     * @param \obo\Carriers\PropertyInformationCarrier $propertyInformation
+     * @return boolean
+     */
+    protected function isParentEntityNameSame(\obo\Carriers\PropertyInformationCarrier $propertyInformation) {
+        $ownerEntityHistory = $propertyInformation->ownerEntityHistory;
+        reset($ownerEntityHistory);
+        $firstDeclarationEntityClassName = key($propertyInformation->ownerEntityHistory);
+        $firstDeclarationEntityName = current($propertyInformation->ownerEntityHistory);
+        $parentEntityClassName = $firstDeclarationEntityClassName::entityInformation()->parentClassName;
+        if ($parentEntityClassName === \obo\Entity::class) {
+            return false;
+        }
+        $parentEntityName = $parentEntityClassName::entityInformation()->name;
+        return ($firstDeclarationEntityName == $parentEntityName);
     }
 
     /**
