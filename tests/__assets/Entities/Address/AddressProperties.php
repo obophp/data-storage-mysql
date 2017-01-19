@@ -35,12 +35,12 @@ class AddressProperties extends \obo\EntityProperties {
     public $postalCode = "";
 
     /**
-     * @obo-many(targetEntity = "\obo\DataStorage\Tests\Assets\Entities\Contact", connectViaProperty = "address")
+     * @obo-many(targetEntity = "Contact", connectViaProperty = "address")
      */
     public $defaultContacts = null;
 
     /**
-     * @obo-many(targetEntity = "\obo\DataStorage\Tests\Assets\Entities\Contact", connectViaRepository = "obo-test2.RelationshipBetweenContactAndOtherAddresses")
+     * @obo-many(targetEntity = "Contact", connectViaRepository = "obo-test2.RelationshipBetweenContactAndOtherAddresses")
      */
     public $contacts = null;
 
