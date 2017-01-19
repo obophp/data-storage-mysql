@@ -8,7 +8,7 @@ class Storage {
      * @var array
      */
     private static $config = [
-        "host" => "127.0.0.1",
+        "hostname" => "127.0.0.1",
         "defaultDatabase" => "testDb",
         "username" => "root",
         "databases" => [
@@ -29,12 +29,13 @@ class Storage {
     private static $dataStorage = null;
 
     /**
-     * @var \obo\Interfaces\IConnection
+     * @return \obo\DataStorage\Connection
      */
     public static function getConnection() {
         if (static::$connection === null) {
             static::$connection = new \obo\DataStorage\Connection(static::$config);
         }
+
         return static::$connection;
     }
 
@@ -45,6 +46,7 @@ class Storage {
         if (static::$dataStorage === null) {
             static::$dataStorage = new \obo\DataStorage\MySQL(static::getConnection(), new \obo\DataStorage\DataConverters\DefaultMysqlDataConverter());
         }
+
         return static::$dataStorage;
     }
 
