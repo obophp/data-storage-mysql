@@ -27,7 +27,7 @@ before_script:
 script:
     - php code-checker/src/code-checker.php --short-arrays -d src/
     - php code-checker/src/code-checker.php --short-arrays -d tests/
-    - vendor/bin/tester -p php tests/ -s
+    - vendor/bin/tester -p php tests/ -s -j 1
     - vendor/bin/phpcs --standard=codesniffer.xml --warning-severity=0 src/
     - vendor/bin/phpcs --standard=codesniffer.xml --warning-severity=0 tests/
 
