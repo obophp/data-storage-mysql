@@ -18,6 +18,16 @@ class ContactManager extends \obo\EntityManager {
     }
 
     /**
+     * @return \obo\DataStorage\Tests\Assets\Entities\Contact[]
+     */
+    public static function contactsAsCollection() {
+        $specification = \obo\Carriers\QuerySpecification::instance();
+        $street = "Street";
+        $specification->where("AND {otherAddresses}.{street} LIKE ?", "%{$street}%");
+        return parent::findEntitiesAsCollection($specification);
+    }
+
+    /**
      * @param array $data
      * @return \obo\DataStorage\Tests\Assets\Entities\Contact
      */

@@ -32,20 +32,9 @@ class MySQLTest extends \Tester\TestCase {
         "fax" => "+420987654321",
     ];
 
-    /**
-     * @var string[]
-     */
-    private static $personalContactData = [
-        "firstname" => "John",
-        "surname" => "Doe",
-        "email" => "john@doe.com",
-        "phone" => "+420123456789",
-        "fax" => "+420987654321",
-    ];
-
     private static $addressData = [
-        'owner' => 1,
-        'ownerEntity' => 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal',
+        "owner" => 1,
+        "ownerEntity" => "PersonalContact",
         "street" => "My Street",
         "houseNumber" => "123",
         "town" => "My Town",
@@ -57,18 +46,62 @@ class MySQLTest extends \Tester\TestCase {
      * @var string[]
      */
     private static $expectedDataForQuery = [
-        'id' => 1,
-        'email' => 'john@doe.com',
-        'phone' => '+420123456789',
-        'fax' => '+420987654321',
-        'address' => 1,
-        'address_id' => 1,
-        'address_owner' => 1,
-        'address_ownerEntity' => 'obo\\DataStorage\\Tests\\Assets\\Entities\\Contact\\Personal',
-        'address_street' => 'My Street',
-        'address_houseNumber' => '123',
-        'address_town' => 'My Town',
-        'address_postalCode' => 12345
+        [
+            "id" => 1,
+            "email" => "john@doe.com",
+            "phone" => "+420564215785",
+            "fax" => "+420999999999",
+            "address" => 1,
+            "address_id" => 1,
+            "address_owner" => 1,
+            "address_ownerEntity" => "PersonalContact",
+            "address_street" => "Arcata Main Street",
+            "address_houseNumber" => "123",
+            "address_town" => "Arcata",
+            "address_postalCode" => 12345,
+        ],
+        [
+            "id" => 2,
+            "email" => "jack@adams.com",
+            "phone" => "+420789562157",
+            "fax" => "+420888888888",
+            "address" => 2,
+            "address_id" => 2,
+            "address_owner" => 2,
+            "address_ownerEntity" => "PersonalContact",
+            "address_street" => "Benicia Main Street",
+            "address_houseNumber" => "456",
+            "address_town" => "Benicia",
+            "address_postalCode" => 67890,
+        ],
+        [
+            "id" => 3,
+            "email" => "info@mycompany.com",
+            "phone" => "+420457659215",
+            "fax" => "+420777777777",
+            "address" => 3,
+            "address_id" => 3,
+            "address_owner" => 3,
+            "address_ownerEntity" => "BusinessContact",
+            "address_street" => "Lakeport Main Street",
+            "address_houseNumber" => "789",
+            "address_town" => "Lakeport",
+            "address_postalCode" => 54321,
+        ],
+        [
+            "id" => 4,
+            "email" => "test@example.com",
+            "phone" => "+420023568451",
+            "fax" => "+420666666666",
+            "address" => 3,
+            "address_id" => 3,
+            "address_owner" => 3,
+            "address_ownerEntity" => "BusinessContact",
+            "address_street" => "Lakeport Main Street",
+            "address_houseNumber" => "789",
+            "address_town" => "Lakeport",
+            "address_postalCode" => 54321,
+        ]
     ];
 
 
@@ -128,6 +161,15 @@ class MySQLTest extends \Tester\TestCase {
     /**
      * @return \obo\Carriers\QueryCarrier
      */
+    protected function createPersonalContactQueryCarrier() {
+        $queryCarrier = new \obo\Carriers\QueryCarrier();
+        $queryCarrier->setDefaultEntityClassName(Assets\Entities\Contact\Personal::class);
+        return $queryCarrier->select(Assets\Entities\Contact\PersonalManager::constructSelect());
+    }
+
+    /**
+     * @return \obo\Carriers\QueryCarrier
+     */
     protected function createAddressQueryCarrier() {
         $queryCarrier = new \obo\Carriers\QueryCarrier();
         $queryCarrier->setDefaultEntityClassName(Assets\Entities\Address::class);
@@ -165,6 +207,14 @@ class MySQLTest extends \Tester\TestCase {
     }
 
     /**
+     * @return \obo\DataStorage\Tests\Assets\Entities\Contact\Personal
+     * @throws \obo\Exceptions\EntityNotFoundException
+     */
+    protected function getPersonalContactEntity($id = self::DEFAULT_ENTITY_ID) {
+        return Assets\Entities\Contact\PersonalManager::personal($id);
+    }
+
+    /**
      * @return \obo\DataStorage\Tests\Assets\Entities\Address
      * @throws \obo\Exceptions\EntityNotFoundException
      */
@@ -173,22 +223,14 @@ class MySQLTest extends \Tester\TestCase {
     }
 
     /**
+     * @param string $repositoryName
+     * @param int $id
      * @return DibiRow|false
      * @throws \Dibi\DriverException
      */
     protected function selectEntity($repositoryName, $id) {
         $repositoryName = "[" . str_replace(".", "].[", $repositoryName) . "]";
         return $this->connection->select("*")->from($repositoryName)->where("id = %i", $id)->fetch();
-    }
-
-    /**
-     * @param string $repositoryName
-     * @return int
-     * @throws \Dibi\DriverException
-     */
-    protected function countRecords($repositoryName) {
-        $repositoryName = "[" . str_replace(".", "].[", $repositoryName) . "]";
-        return (int)$this->connection->select("COUNT(*)")->from($repositoryName)->fetchSingle();
     }
 
     /**
@@ -204,21 +246,9 @@ class MySQLTest extends \Tester\TestCase {
         );
     }
 
-    /**
-     * @return array
-     */
-    protected function getExpectedDataForEntity() {
-        $expectedData = [];
-        for($i = 0; $i <= 2; $i++) {
-            $expectedData[$i] = static::$expectedDataForQuery;
-            $expectedData[$i]["id"] = $i+1;
-        }
-        return $expectedData;
-    }
-
     public function testConstructQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
-        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`id` AS `address_id`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`owner` AS `address_owner`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`street` AS `address_street`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`town` AS `address_town`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` LEFT JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` as `obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address` ON `obo-test`.`Contacts`.`address` = `obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`id`";
+        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`jk1`.`id` AS `address_id`, `obo-test2`.`jk1`.`owner` AS `address_owner`, `obo-test2`.`jk1`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`jk1`.`street` AS `address_street`, `obo-test2`.`jk1`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`jk1`.`town` AS `address_town`, `obo-test2`.`jk1`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `jk1` ON `obo-test`.`Contacts`.`address` = `jk1`.`id` /** jk1 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */ ";
         $actualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($expectedQuery, $actualQuery);
     }
@@ -226,12 +256,12 @@ class MySQLTest extends \Tester\TestCase {
     public function testDataForQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
         $actualData = $this->storage->dataForQuery($queryCarrier);
-        Assert::equal($this->getExpectedDataForEntity(), $actualData);
+        Assert::equal(self::$expectedDataForQuery, $actualData);
     }
 
     public function testCountRecordsForQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
-        Assert::equal($this->storage->countRecordsForQuery($queryCarrier), 3);
+        Assert::equal($this->storage->countRecordsForQuery($queryCarrier), 4);
     }
 
     public function testInsertEntity() {
@@ -269,30 +299,26 @@ class MySQLTest extends \Tester\TestCase {
     }
 
     public function testCountEntitiesInRelationship() {
-        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 3);
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 2);
     }
 
+    /**
+     * @todo Implement test for this method
+     */
     public function testDataForEntitiesInRelationship() {
-        $queryCarrier = $this->createContactQueryCarrier();
-        $owner = $this->getContactEntity();
-        $targetEntity = $this->getAddressEntity();
-        $actualData = $this->storage->dataForEntitiesInRelationship($queryCarrier, static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, $owner, $targetEntity);
-        Assert::equal($this->getExpectedDataForEntity(), $actualData);
+
     }
 
     public function testCreateRelationshipBetweenEntities() {
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 2);
+        $this->storage->createRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->getContactEntity(), $this->createAddressEntity()]);
         Assert::equal($this->countRelationshipBetweenContactAndAddress(), 3);
-        Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 3);
-        $this->storage->createRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->createContactEntity(), $this->createAddressEntity()]);
-        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 4);
-        Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 4);
     }
 
     public function testRemoveRelationshipBetweenEntities() {
-        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 3);
-        Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 3);
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 2);
         $this->storage->removeRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->getContactEntity(), $this->getAddressEntity()]);
-        Assert::equal($this->countRecords(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY), 2);
+        Assert::equal($this->countRelationshipBetweenContactAndAddress(), 1);
     }
 
     public function testInformationForEntity() {
@@ -313,16 +339,6 @@ class MySQLTest extends \Tester\TestCase {
         foreach ($addresses as $address) {
             Assert::type(Assets\Entities\Address::class, $address);
             Assert::type(Assets\Entities\Contact\Personal::class, $address->owner);
-            Assert::equal(
-                static::$personalContactData,
-                $address->owner->propertiesAsArray([
-                    "firstname" => true,
-                    "surname" => true,
-                    "email" => true,
-                    "phone" => true,
-                    "fax" => true
-                ])
-            );
             foreach ($address->defaultContacts as $contact) {
                 Assert::type(Assets\Entities\Contact::class, $contact);
             }
@@ -334,6 +350,26 @@ class MySQLTest extends \Tester\TestCase {
         foreach ($contacts as $contact) {
             Assert::type(Assets\Entities\Contact::class, $contact);
         }
+
+        Assert::exception(
+            function () {
+                $this->getContactEntity(5);
+            },
+            \obo\Exceptions\EntityNotFoundException::class
+        );
+
+        $contacts = Assets\Entities\ContactManager::contactsAsCollection();
+        Assert::true(is_array($contacts->asArray()));
+
+        $extendedBusinessContact = Assets\Entities\Contact\Business\ExtendedManager::extended(3);
+        Assert::true(is_array($extendedBusinessContact->propertiesAsArray()));
+
+        Assert::exception(
+            function () {
+                Assets\Entities\Contact\Business\ExtendedManager::extended(1);
+            },
+            \obo\Exceptions\EntityNotFoundException::class
+        );
     }
 
     public function tearDown() {

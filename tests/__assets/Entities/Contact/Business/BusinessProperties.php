@@ -4,10 +4,15 @@ namespace obo\DataStorage\Tests\Assets\Entities\Contact;
 
 class BusinessProperties extends \obo\DataStorage\Tests\Assets\Entities\ContactProperties {
 
-    /** @obo-autoIncrement */
+    /**
+     * @obo-autoIncrement
+     */
     public $id = 0;
 
-    /** @obo-dataType(string) */
+    /**
+     * @obo-repositoryName(BusinessContacts)
+     * @obo-dataType(string)
+     */
     public $companyName = "";
 
 }

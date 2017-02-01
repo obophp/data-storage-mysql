@@ -73,7 +73,6 @@ class Connection extends \Dibi\Connection {
         unset($config[static::DATABASES_KEY]);
         unset($config[static::DEFAULT_DATABASE_KEY]);
         $config[static::DATABASE_KEY] = $this->defaultDatabase;
-
         parent::__construct($config, $name);
     }
 
@@ -94,6 +93,14 @@ class Connection extends \Dibi\Connection {
      */
     public function getDefaultStorageName() {
         return $this->defaultDatabase;
+    }
+
+    /**
+     * @param string $databaseAlias
+     * @throws \InvalidArgumentException
+     */
+    public function switchDatabase($databaseAlias) {
+        $this->query("USE `" . $this->getStorageNameByAlias($databaseAlias) . "`");
     }
 
 }

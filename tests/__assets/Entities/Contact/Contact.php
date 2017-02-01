@@ -3,6 +3,7 @@
 namespace obo\DataStorage\Tests\Assets\Entities;
 
 /**
+ * @obo-name(Contact)
  * @obo-storageName(testDb)
  * @obo-repositoryName(Contacts)
  * @property string $email
