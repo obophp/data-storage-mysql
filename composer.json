@@ -20,7 +20,7 @@
     "require": {
         "php": ">=5.5.0",
         "dibi/dibi": "^3.0.6",
-        "obo/obo": ">=0.12.7",
+        "obo/obo": ">=0.13.0",
         "nette/reflection": "~2.2"
     },
     "require-dev": {
