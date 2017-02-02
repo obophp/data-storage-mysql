@@ -10,7 +10,7 @@ class AddressManager extends \obo\EntityManager {
 
     /**
      * @param int|array $specification
-     * @return Contact
+     * @return \obo\DataStorage\Tests\Assets\Entities\Address
      * @throws \obo\Exceptions\EntityNotFoundException
      */
     public static function address($specification) {
