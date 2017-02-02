@@ -18,7 +18,7 @@ class Storage {
     ];
 
     /**
-     * @var \obo\Interfaces\IConnection
+     * @var \obo\DataStorage\Connection
      */
     private static $connection = null;
 
@@ -29,7 +29,14 @@ class Storage {
     private static $dataStorage = null;
 
     /**
-     * @var \obo\Interfaces\IConnection
+     * @return array
+     */
+    public static function getConfig() {
+        return static::$config;
+    }
+
+    /**
+     * @return \obo\DataStorage\Connection
      */
     public static function getConnection() {
         if (static::$connection === null) {

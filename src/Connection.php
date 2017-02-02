@@ -73,7 +73,6 @@ class Connection extends \Dibi\Connection {
         unset($config[static::DATABASES_KEY]);
         unset($config[static::DEFAULT_DATABASE_KEY]);
         $config[static::DATABASE_KEY] = $this->defaultDatabase;
-
         parent::__construct($config, $name);
     }
 
@@ -94,6 +93,42 @@ class Connection extends \Dibi\Connection {
      */
     public function getDefaultStorageName() {
         return $this->defaultDatabase;
+    }
+
+    /**
+     * @param string $storageName
+     * @return void
+     */
+    protected function switchToStorageWithName($storageName) {
+        $this->query("USE [" . $storageName . "]");
+    }
+
+    /**
+     * @param string $storageAlias
+     * @throws \InvalidArgumentException
+     * @return void
+     */
+    protected function switchToStorageWithAlias($storageAlias) {
+        $this->switchToStorageWithName($this->getStorageNameByAlias($storageAlias));
+    }
+
+    /**
+     * @return void
+     */
+    protected function switchToDefaultStorage() {
+        $this->switchToStorageWithName($this->getDefaultStorageName());
+    }
+
+    /**
+     * Import SQL dump from file to database with the given alias
+     * @param string $filename
+     * @param string $storageAlias
+     * @return int count of sql commands
+     */
+    public function loadFileToStorageWithAlias($filename, $storageAlias) {
+        $this->switchToStorageWithAlias($storageAlias);
+        parent::loadFile($filename);
+        $this->switchToDefaultStorage();
     }
 
 }
