@@ -256,9 +256,13 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         foreach ($convertedData as $storageName => $storageData) {
             foreach ($storageData as $repositoryName => $data) {
-                if ($lastInsertId) $repositoryData[$primaryPropertyColumnName] = $lastInsertId;
+                if ($lastInsertId) {
+                    $data[$primaryPropertyColumnName] = $lastInsertId;
+                }
                 $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", $data);
-                if (!$lastInsertId) $lastInsertId = $this->connection->getInsertId();
+                if (!$lastInsertId) {
+                    $lastInsertId = $this->connection->getInsertId();
+                }
             }
         }
 
