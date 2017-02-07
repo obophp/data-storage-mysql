@@ -11,6 +11,7 @@ INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (1,
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (2, 'jack@adams.com', '+420789562157', 2);
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (3, 'info@mycompany.com', '+420457659215', 3);
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (4, 'test@example.com', '+420023568451', 3);
+INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (5, 'test@example.com', '+420541569872', 3);
 
 
 DROP TABLE IF EXISTS `obo-test`.`PersonalContacts`;

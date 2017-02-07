@@ -258,7 +258,7 @@ class MySQLTest extends \Tester\TestCase {
 
     public function testConstructQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
-        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`id` AS `address_id`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`owner` AS `address_owner`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`street` AS `address_street`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`town` AS `address_town`, `obo-test2`.`obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` LEFT JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` as `obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address` ON `obo-test`.`Contacts`.`address` = `obo\DataStorage\Tests\Assets\Entities\Contact->obo\DataStorage\Tests\Assets\Entities\Address`.`id`";
+        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`t1`.`id` AS `address_id`, `obo-test2`.`t1`.`owner` AS `address_owner`, `obo-test2`.`t1`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`t1`.`street` AS `address_street`, `obo-test2`.`t1`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`t1`.`town` AS `address_town`, `obo-test2`.`t1`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t1` ON `obo-test`.`Contacts`.`address` = `t1`.`id` /** t1 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */ ";
         $actualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($expectedQuery, $actualQuery);
     }
@@ -370,6 +370,9 @@ class MySQLTest extends \Tester\TestCase {
             },
             \obo\Exceptions\EntityNotFoundException::class
         );
+
+        $contacts = Assets\Entities\ContactManager::contactsAsCollection();
+        Assert::true(is_array($contacts->asArray()));
 
         $extendedBusinessContact = Assets\Entities\Contact\Business\ExtendedManager::extended(3);
         Assert::true(is_array($extendedBusinessContact->propertiesAsArray()));
