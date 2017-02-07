@@ -961,11 +961,30 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 }
 
                 $connectedEntityJoinPart = $this->createJoinKeyPart($propertyStorageName, $propertyInformation->repositoryName, $defaultEntityPrimaryPropertyColumnName);
-                $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, self::JOIN_TYPE_INNER);
-                $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joins = [$joinKey => " INNER JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
+                $joinType = ($this->isParentEntityNameSame($propertyInformation)) ? "LEFT" : "INNER";
+                $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, ($joinType == "LEFT") ? self::JOIN_TYPE_LEFT : self::JOIN_TYPE_INNER);
+                $joins = [$joinKeyAlias => " {$joinType} JOIN [{$propertyStorageName}].[{$propertyRepositoryName}] ON [{$propertyStorageName}].[{$propertyRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyColumnName}]"] + $joins;
             }
         }
+    }
+
+    /**
+     *
+     * @param \obo\Carriers\PropertyInformationCarrier $propertyInformation
+     * @return boolean
+     */
+    protected function isParentEntityNameSame(\obo\Carriers\PropertyInformationCarrier $propertyInformation) {
+        $ownerEntityHistory = $propertyInformation->ownerEntityHistory;
+        $firstDeclarationEntityClassName = \key($ownerEntityHistory);
+        $firstDeclarationEntityName = \current($ownerEntityHistory);
+        $parentEntityClassName = $firstDeclarationEntityClassName::entityInformation()->parentClassName;
+
+        if ($parentEntityClassName === \obo\Entity::class) {
+            return false;
+        }
+
+        $parentEntityName = $parentEntityClassName::entityInformation()->name;
+        return ($firstDeclarationEntityName == $parentEntityName);
     }
 
     /**
