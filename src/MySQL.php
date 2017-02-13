@@ -207,7 +207,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $data = \array_merge($data, $queryCarrier->getFrom()["data"]);
         }
 
-        $query .= implode($joins, " ");
+        if ($join["query"] !== "") {
+            $query .= $join["query"];
+            $data = \array_merge($data, $join["data"]);
+        }
 
         if ($where["query"] !== "") {
             $query .= " WHERE " . \preg_replace("#^ *(AND|OR) *#i", "", $where["query"]);
