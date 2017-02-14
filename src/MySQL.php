@@ -272,7 +272,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $entityInformation = $entity->entityInformation();
         $informationForEntity = $this->informationForEntity($entityInformation);
         $entityStorageName = $this->getStorageNameForEntity($entityInformation);
-        $repositoryName = $entityInformation->repositoryName;
         $primaryPropertyColumnName = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->columnName;
 
         if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->begin();
@@ -375,6 +374,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param string $repositoryName
      * @param \obo\Entity $owner
      * @param string $targetEntity
+     * @return \obo\Carriers\QueryCarrier
      */
     protected function constructJoinQueryForRelationship(\obo\Carriers\QueryCarrier $specification, $storageName, $repositoryName, \obo\Entity $owner, $targetEntity) {
         $targetEntityPropertyNameForSoftDelete = $targetEntity::entityInformation()->propertyNameForSoftDelete;
@@ -383,7 +383,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         if ($targetEntityPropertyNameForSoftDelete === "") {
             $specification->join("JOIN [{$storageName}].[{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$owner->entityInformation()->repositoryName]["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] ." AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
         } else {
-            $targetEntityStorageName = $this->getStorageNameForEntiy($targetEntity->entityInformation());
             $softDeleteJoinQuery = "AND [{$targetEntity::entityInformation()->repositoryName}].[{$targetEntity::informationForPropertyWithName($targetEntityPropertyNameForSoftDelete)->columnName}] = %b";
             $specification->join("JOIN [{$storageName}].[{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$owner->repositoryName]["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), false);
         }
@@ -410,8 +409,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             }
         }
 
-        $entityInformation = $entity->entityInformation();
-        $informationForEntity = $this->informationForEntity($entityInformation);
         $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$entities[0]->entityInformation()->repositoryName => $entities[0]->primaryPropertyValue(), $entities[1]->entityInformation()->repositoryName => $entities[1]->primaryPropertyValue()]);
     }
 
@@ -596,9 +593,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     protected function convertDataForImport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
         $convertedData = [];
-
         $information = $this->informationForEntity($entityInformation);
-        $entityStorageName = $this->getStorageNameForEntity($entityInformation);
 
         foreach ($data as $propertyName => $propertyValue) {
             $propertyInformation = $entityInformation->informationForPropertyWithName($propertyName);
@@ -737,7 +732,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $defaultEntityInformation = $defaultEntityClassName::entityInformation();
             $joinKeyAlias = null;
             $selectItemAlias = null;
-            $ownerStorageName = $this->getStorageNameForEntity($defaultEntityInformation);
             $ownerRepositoryName = $defaultEntityInformation->repositoryName;
 
             $items = \explode("}.{", trim($block, "{}"));
