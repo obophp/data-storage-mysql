@@ -379,12 +379,21 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected function constructJoinQueryForRelationship(\obo\Carriers\QueryCarrier $specification, $storageName, $repositoryName, \obo\Entity $owner, $targetEntity) {
         $targetEntityPropertyNameForSoftDelete = $targetEntity::entityInformation()->propertyNameForSoftDelete;
         $ownerStorageName = $this->getStorageNameForEntity($owner->entityInformation());
+        $ownerRepositoryName = $owner->entityInformation()->repositoryName;
+        $ownerPrimaryColumnName = $owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName;
+        $targetEntityStorageName = $this->getStorageNameForEntity($targetEntity::entityInformation());
+        $targetEntityRepositoryName = $targetEntity::entityInformation()->repositoryName;
+        $targetPrimaryColumnName = $targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName;
+        $ownerJoinKeyPart = $this->createJoinKeyPart($storageName, $repositoryName, $ownerRepositoryName);
+        $targetJoinKeyPart = $this->createJoinKeyPart($targetEntityStorageName, $targetEntityRepositoryName, $ownerPrimaryColumnName);
+        $joinKeyAlias = $this->createJoinKeyAlias($ownerJoinKeyPart, $targetJoinKeyPart, static::JOIN_TYPE_INNER);
+        $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
 
         if ($targetEntityPropertyNameForSoftDelete === "") {
-            $specification->join("JOIN [{$storageName}].[{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$owner->entityInformation()->repositoryName]["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] ." AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]", $owner->primaryPropertyValue());
+            $specification->join("INNER JOIN [{$storageName}].[{$repositoryName}] AS [{$joinKeyAlias}] ON [{$joinKeyAlias}].[{$ownerRepositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$ownerRepositoryName]["columns"][$ownerPrimaryColumnName]["placeholder"] . " AND [{$joinKeyAlias}].[{$ownerRepositoryName}] = [{$targetPrimaryColumnName}]", $owner->primaryPropertyValue() . static::createComment($joinKeyAlias, $joinKey));
         } else {
-            $softDeleteJoinQuery = "AND [{$targetEntity::entityInformation()->repositoryName}].[{$targetEntity::informationForPropertyWithName($targetEntityPropertyNameForSoftDelete)->columnName}] = %b";
-            $specification->join("JOIN [{$storageName}].[{$repositoryName}] ON [{$owner->entityInformation()->repositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$owner->repositoryName]["columns"][$owner->entityInformation()->informationForPropertyWithName($owner->entityInformation()->primaryPropertyName)->columnName]["placeholder"] . " AND [{$targetEntity::entityInformation()->repositoryName}] = [{$targetEntity::informationForPropertyWithName($targetEntity::entityInformation()->primaryPropertyName)->columnName}]" . $softDeleteJoinQuery, $owner->primaryPropertyValue(), false);
+            $softDeleteJoinQuery = "AND [{$storageName}].[{$repositoryName}].[{$targetEntityRepositoryName}].[{$targetEntity::informationForPropertyWithName($targetEntityPropertyNameForSoftDelete)->columnName}] = %b";
+            $specification->join("INNER JOIN [{$storageName}].[{$repositoryName}] AS [{$joinKeyAlias}] ON [{$joinKeyAlias}].[{$ownerRepositoryName}] = " . $this->informationForEntity($owner->entityInformation())["storages"][$ownerStorageName]["repositories"][$owner->repositoryName]["columns"][$ownerPrimaryColumnName]["placeholder"] . " AND [{$joinKeyAlias}].[{$ownerRepositoryName}] = [{$targetPrimaryColumnName}]", $owner->primaryPropertyValue() . static::createComment($joinKeyAlias, $joinKey), false);
         }
 
         return $specification;
