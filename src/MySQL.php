@@ -896,7 +896,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 if (isset($this->informationForEntity($defaultPropertyInformation->entityInformation)["storages"][$ownerStorageName]["repositories"][$ownerRepositoryName])) {
                     $segment = \str_replace($this->parameterPlaceholder, $this->informationForEntity($defaultPropertyInformation->entityInformation)["storages"][$ownerStorageName]["repositories"][$ownerRepositoryName]["columns"][$defaultPropertyInformation->columnName]["placeholder"], $segment);
                 }
-                $part["query"] = \str_replace($matches[0], $segment, $part["query"]);
+                if (($pos = strpos($part["query"], $matches[0])) !== false) $part["query"] = substr_replace($part["query"], $segment, $pos, strlen($matches[0]));
             } else {
                 $part["query"] = \preg_replace("#(\{(.*?)\}\.?)+#", "[{$ownerStorageName}].[{$ownerRepositoryName}].[{$defaultPropertyInformation->columnName}]". ($type === self::PROCESS_SELECT ? " AS [{$selectItemAlias}{$defaultPropertyInformation->name}]" : ""), $part["query"], 1);
             }
