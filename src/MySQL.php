@@ -576,7 +576,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             }
 
             foreach ($nullEntities as $nullEntity) {
-                $convertedRow = \array_intersect_key($convertedRow, \array_flip(\array_filter(\array_keys($convertedRow), function($key) use ($nullEntity) {return \strpos($key, "_" . $nullEntity. "_") === false;
+                $convertedRow = \array_intersect_key($convertedRow, \array_flip(\array_filter(\array_keys($convertedRow), function($key) use ($nullEntity) {return \strpos($key, $nullEntity . "_") === false;
                 })));
             }
 

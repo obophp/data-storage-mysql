@@ -12,7 +12,7 @@ INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (2,
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (3, 'info@mycompany.com', '+420457659215', 3);
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (4, 'test@example.com', '+420023568451', 3);
 INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (5, 'test@example.com', '+420541569872', 3);
-
+INSERT INTO `obo-test`.`Contacts` (`id`, `email`, `phone`, `address`) VALUES (6, 'test@example.com', '+420541569872', null);
 
 DROP TABLE IF EXISTS `obo-test`.`PersonalContacts`;
 CREATE TABLE `obo-test`.`PersonalContacts` (
@@ -55,6 +55,7 @@ INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (1, '+420999999999');
 INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (2, '+420888888888');
 INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (3, '+420777777777');
 INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (4, '+420666666666');
+INSERT INTO `obo-test2`.`Contacts` (`id`, `fax`) VALUES (6, '+420666666666');
 
 
 DROP TABLE IF EXISTS `obo-test2`.`Address`;
