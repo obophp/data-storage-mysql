@@ -101,6 +101,13 @@ class MySQLTest extends \Tester\TestCase {
             "address_houseNumber" => "789",
             "address_town" => "Lakeport",
             "address_postalCode" => 54321,
+        ],
+        [
+            "id" => 6,
+            "email" => "test@example.com",
+            "phone" => "+420541569872",
+            "fax" => "+420666666666",
+            "address" => null,
         ]
     ];
 
@@ -271,7 +278,7 @@ class MySQLTest extends \Tester\TestCase {
 
     public function testCountRecordsForQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
-        Assert::equal($this->storage->countRecordsForQuery($queryCarrier), 4);
+        Assert::equal($this->storage->countRecordsForQuery($queryCarrier), 5);
     }
 
     public function testInsertEntity() {
