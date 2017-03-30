@@ -328,11 +328,10 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $informationForEntity = $this->informationForEntity($entityInformation);
         $entityStorageName = $this->getStorageNameForEntity($entityInformation);
         $primaryPropertyPlaceholder = $informationForEntity["storages"][$entityStorageName]["repositories"][$entity->entityInformation()->repositoryName]["columns"][$primaryPropertyColumnName]["placeholder"];
-        $convertedData = $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation());
         if (count($informationForEntity["storages"][$entityStorageName]["repositories"]) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->begin();
 
-        foreach ($convertedData as $storageName => $storageData) {
-            foreach ($storageData as $repositoryName => $data) {
+        foreach ($informationForEntity["storages"] as $storageName => $storageData) {
+            foreach ($storageData["repositories"] as $repositoryName => $data) {
                 $this->connection->query("DELETE FROM [{$storageName}].[{$repositoryName}] WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder} LIMIT 1", $entity->primaryPropertyValue());
             }
         }
