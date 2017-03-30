@@ -266,8 +266,10 @@ class MySQLTest extends \Tester\TestCase {
     public function testConstructQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
         $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`t1`.`id` AS `address_id`, `obo-test2`.`t1`.`owner` AS `address_owner`, `obo-test2`.`t1`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`t1`.`street` AS `address_street`, `obo-test2`.`t1`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`t1`.`town` AS `address_town`, `obo-test2`.`t1`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t1` ON `obo-test`.`Contacts`.`address` = `t1`.`id` /** t1 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */ ";
-        $actualQuery = $this->storage->constructQuery($queryCarrier);
-        Assert::equal($expectedQuery, $actualQuery);
+        $firstActualQuery = $this->storage->constructQuery($queryCarrier);
+        $secondActualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $firstActualQuery);
+        Assert::equal($expectedQuery, $secondActualQuery);
     }
 
     public function testDataForQuery() {
