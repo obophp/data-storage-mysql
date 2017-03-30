@@ -315,7 +315,7 @@ class MySQLTest extends \Tester\TestCase {
     }
 
     public function testRemoveEntity() {
-        $entity = $this->getContactEntity();
+        $entity = $this->getContactEntity(2);
         $entityKey = $entity->primaryPropertyValue();
         $this->storage->removeEntity($entity);
         $deletedEntity = $this->selectEntity(static::CONTACTS_REPOSITORY, $entityKey);
