@@ -27,11 +27,6 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected $connection = null;
 
     /**
-     * @var \DibiTranslator
-     */
-    protected $dibiTranslator = null;
-
-    /**
      * @var \obo\DataStorage\Interfaces\IDataConverter
      */
     protected $dataConverter = null;
@@ -101,8 +96,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @return \DibiTranslator
      */
     protected function getDibiTranslator() {
-        if ($this->dibiTranslator instanceof \DibiTranslator) return $this->dibiTranslator;
-        return $this->dibiTranslator = new \DibiTranslator($this->getConnection());
+        return new \DibiTranslator($this->getConnection());
     }
 
     /**
