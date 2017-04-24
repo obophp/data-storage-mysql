@@ -40,7 +40,7 @@ class AddressProperties extends \obo\EntityProperties {
     public $defaultContacts = null;
 
     /**
-     * @obo-many(targetEntity = "Contact", connectViaRepository = "obo-test2.RelationshipBetweenContactAndOtherAddresses")
+     * @obo-many(targetEntity = "Contact", connectViaRepository = "testDb2.RelationshipBetweenContactAndOtherAddresses")
      */
     public $contacts = null;
 
