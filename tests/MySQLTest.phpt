@@ -135,6 +135,11 @@ class MySQLTest extends \Tester\TestCase {
     /**
      * @var string
      */
+    const RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_ALIAS_REPOSITORY = "testDb2.RelationshipBetweenContactAndOtherAddresses";
+
+    /**
+     * @var string
+     */
     const TEST_SQL_FILE = "test.sql";
 
     /**
@@ -338,13 +343,13 @@ class MySQLTest extends \Tester\TestCase {
 
     public function testCreateRelationshipBetweenEntities() {
         Assert::equal($this->countRelationshipBetweenContactAndAddress(), 2);
-        $this->storage->createRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->getContactEntity(), $this->createAddressEntity()]);
+        $this->storage->createRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_ALIAS_REPOSITORY, [$this->getContactEntity(), $this->createAddressEntity()]);
         Assert::equal($this->countRelationshipBetweenContactAndAddress(), 3);
     }
 
     public function testRemoveRelationshipBetweenEntities() {
         Assert::equal($this->countRelationshipBetweenContactAndAddress(), 2);
-        $this->storage->removeRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, [$this->getContactEntity(), $this->getAddressEntity()]);
+        $this->storage->removeRelationshipBetweenEntities(static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_ALIAS_REPOSITORY, [$this->getContactEntity(), $this->getAddressEntity()]);
         Assert::equal($this->countRelationshipBetweenContactAndAddress(), 1);
     }
 

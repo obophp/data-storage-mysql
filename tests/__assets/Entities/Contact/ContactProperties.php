@@ -45,7 +45,7 @@ class ContactProperties extends \obo\EntityProperties {
     public $homeAddresses;
 
     /**
-     * @obo-many(targetEntity="Address", connectViaRepository="obo-test2.RelationshipBetweenContactAndOtherAddresses", cascade = save)
+     * @obo-many(targetEntity="Address", connectViaRepository="testDb2.RelationshipBetweenContactAndOtherAddresses", cascade = save)
      */
     public $otherAddresses;
 

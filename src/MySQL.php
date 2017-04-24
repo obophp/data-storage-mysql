@@ -132,7 +132,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     protected function extractStorageName($repository) {
         $storage = explode(".", $repository);
         if (count($storage) == 2) {
-            return $storage[0];
+            return $this->getConnection()->getStorageNameByAlias($storage[0]);
         } else {
             return $this->defaultStorageName;
         }
@@ -861,7 +861,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                             $join = self::manyViaRepositoryRelationshipJoinQuery(
                                 $joinKeyAlias,
                                 $joinKey,
-                                $defaultPropertyInformation->relationship->connectViaRepositoryWithName, //$connectViaRepositoryWithName
+                                $connectViaRepositoryStorageName,
+                                $connectViaRepositoryRepositoryName,
                                 $ownerStorageName,
                                 $ownerRepositoryName,
                                 $ownedStorageName,
@@ -931,7 +932,9 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $connectedEntityJoinPart = $this->createJoinKeyPart($connectedEntityStorageName, $connectedEntityInformation->repositoryName, $connectedEntityPrimaryPropertyInformation->columnName);
                 $joinKeyAlias = $this->createJoinKeyAlias($defaultEntityJoinPart, $connectedEntityJoinPart, static::JOIN_TYPE_INNER);
                 $joinKey = $this->getJoinKeyByAlias($joinKeyAlias);
-                $joins[$joinKeyAlias] = " INNER JOIN [{$parts[0]}] AS [{$joinKeyAlias}] ON [{$joinKeyAlias}].[{$defaultEntityRepositoryName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyInformation->columnName}]" . static::createComment($joinKeyAlias, $joinKey);
+                $storageName = $this->extractStorageName($parts[0]);
+                $repositoryName = $this->extractRepositoryName($parts[0]);
+                $joins[$joinKeyAlias] = " INNER JOIN [{$storageName}].[{$repositoryName}] AS [{$joinKeyAlias}] ON [{$joinKeyAlias}].[{$defaultEntityRepositoryName}] = [{$defaultEntityStorageName}].[{$defaultEntityRepositoryName}].[{$defaultEntityPrimaryPropertyInformation->columnName}]" . static::createComment($joinKeyAlias, $joinKey);
                 $newBlock = \str_replace($blocks[1][$key], "[{$joinKeyAlias}].[{$connectedEntityInformation->repositoryName}]", $block);
                 $newBlock = \str_replace(
                     $blocks[3][$key],
@@ -1060,7 +1063,8 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     /**
      * @param string $joinKeyAlias
      * @param string $joinKey
-     * @param string $connectViaRepositoryWithName
+     * @param string $connectViaRepositoryStorageName
+     * @param string $connectViaRepositoryRepositoryName
      * @param string $ownerStorageName
      * @param string $ownerRepositoryName
      * @param string $ownedStorageName
@@ -1070,13 +1074,13 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      * @param string $columnNameForSoftDelete
      * @return string
      */
-    protected static function manyViaRepositoryRelationshipJoinQuery($joinKeyAlias, $joinKey, $connectViaRepositoryWithName, $ownerStorageName, $ownerRepositoryName, $ownedStorageName, $ownedRepositoryName, $ownerPrimaryPropertyColumnName, $ownedPrimaryPropertyColumnName, $columnNameForSoftDelete) {
+    protected static function manyViaRepositoryRelationshipJoinQuery($joinKeyAlias, $joinKey, $connectViaRepositoryStorageName, $connectViaRepositoryRepositoryName, $ownerStorageName, $ownerRepositoryName, $ownedStorageName, $ownedRepositoryName, $ownerPrimaryPropertyColumnName, $ownedPrimaryPropertyColumnName, $columnNameForSoftDelete) {
         $softDeleteClause = $columnNameForSoftDelete ? " AND [{$joinKeyAlias}].[{$columnNameForSoftDelete}] = 0" : "";
-        return "LEFT JOIN [{$connectViaRepositoryWithName}]
-                ON [{$connectViaRepositoryWithName}].[{$ownerRepositoryName}]
+        return "LEFT JOIN [{$connectViaRepositoryStorageName}].[{$connectViaRepositoryRepositoryName}]
+                ON [{$connectViaRepositoryStorageName}].[{$connectViaRepositoryRepositoryName}].[{$ownerRepositoryName}]
                 = [{$ownerStorageName}].[{$ownerRepositoryName}].[{$ownerPrimaryPropertyColumnName}]
                 LEFT JOIN [{$ownedStorageName}].[{$ownedRepositoryName}] AS [{$joinKeyAlias}]
-                ON [{$connectViaRepositoryWithName}].[{$ownedRepositoryName}]
+                ON [{$connectViaRepositoryStorageName}].[{$connectViaRepositoryRepositoryName}].[{$ownedRepositoryName}]
                 = [{$joinKeyAlias}].[{$ownedPrimaryPropertyColumnName}]{$softDeleteClause}" . static::createComment($joinKeyAlias, $joinKey);
     }
 
