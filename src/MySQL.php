@@ -152,6 +152,15 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
     }
 
     /**
+     * @param \obo\Entity $entity
+     * @return string
+     */
+    public function repositoryAddressForEntity(\obo\Entity $entity) {
+        $entityInformation = $entity->entityInformation();
+        return "[" . $this->getStorageNameForEntity($entityInformation) . "].[" . $entityInformation->repositoryName . "]";
+    }
+
+    /**
      * @param \obo\Carriers\QueryCarrier $queryCarrier
      * @param boolean $asArray
      * @return string

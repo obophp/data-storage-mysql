@@ -130,6 +130,11 @@ class MySQLTest extends \Tester\TestCase {
     /**
      * @var string
      */
+    const CONTACTS_REPOSITORY_ADDRESS = "[obo-test].[Contacts]";
+
+    /**
+     * @var string
+     */
     const RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY = "obo-test2.RelationshipBetweenContactAndOtherAddresses";
 
     /**
@@ -363,6 +368,11 @@ class MySQLTest extends \Tester\TestCase {
         $addressEntityInformation = $addressQueryCarrier->getDefaultEntityEntityInformation();
         $informationForAddressEntity = $this->storage->informationForEntity($addressEntityInformation);
         Assert::true(isset($informationForAddressEntity["storages"]["obo-test2"]["repositories"]["Address"]), "Repository Address located in storage with name obo-test2 is not properly indexed");
+    }
+
+    public function testRepositoryAddressForEntity() {
+        $entity = $this->getContactEntity();
+        \Tester\Assert::same(static::CONTACTS_REPOSITORY_ADDRESS, $entity->datastorage()->repositoryAddressForEntity($entity));
     }
 
     public function testSelectEntities() {
