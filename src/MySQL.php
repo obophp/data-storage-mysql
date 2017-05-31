@@ -271,7 +271,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
      */
     public function insertEntity(\obo\Entity $entity) {
         if ($entity->isBasedInRepository()) throw new \obo\Exceptions\Exception("Can't insert entity into storage. Entity is already persisted.");
-        $convertedData = $this->convertDataForImport($entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true), $entity->entityInformation());
+        $convertedData = $this->convertDataForImport($entity->dataToStore(), $entity->entityInformation());
         $entityInformation = $entity->entityInformation();
         $informationForEntity = $this->informationForEntity($entityInformation);
         $entityStorageName = $this->getStorageNameForEntity($entityInformation);
@@ -307,8 +307,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $informationForEntity = $this->informationForEntity($entityInformation);
         $entityStorageName = $this->getStorageNameForEntity($entityInformation);
         $primaryPropertyPlaceholder = $informationForEntity["storages"][$entityStorageName]["repositories"][$entity->entityInformation()->repositoryName]["columns"][$primaryPropertyColumnName]["placeholder"];
-        $changedProperties = $entity->changedProperties($entity->entityInformation()->persistablePropertiesNames, true, true);
-        $convertedData = $this->convertDataForImport($changedProperties, $entity->entityInformation());
+        $convertedData = $this->convertDataForImport($entity->dataToStore(), $entity->entityInformation());
         if (count($convertedData) > 1 AND $informationForEntity["storages"][$entityStorageName]["transactionEnabled"]) $this->connection->begin();
 
         foreach ($convertedData as $storageName => $storageData) {
