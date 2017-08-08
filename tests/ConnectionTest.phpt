@@ -82,6 +82,59 @@ class ConnectionTest extends \Tester\TestCase {
             \InvalidArgumentException::class
         );
     }
+
+    public function testTimerInExecuteQuery() {
+        $this->executeTimerTestOnMethod("executeQuery");
+    }
+
+    public function testTimerInFetch() {
+        $this->executeTimerTestOnMethod("fetch");
+    }
+
+    public function testTimerInFetchAll() {
+        $this->executeTimerTestOnMethod("fetchAll");
+    }
+
+    public function testTimerInFetchSingle() {
+        $this->executeTimerTestOnMethod("fetchSingle");
+    }
+
+    protected function executeTimerTestOnMethod($methodName) {
+        $this->connection->startTimer("t1");
+
+        $this->connection->startTimer("t2");
+        $this->connection->$methodName("SELECT * FROM [Contacts]");
+
+        $t2 = $this->connection->readTimer("t2");
+        Assert::same($this->connection->readTimer("t1"), $t2);
+
+        $this->connection->startTimer("t3");
+        $this->connection->$methodName("SELECT * FROM [Contacts]");
+        $t3 = $this->connection->readTimer("t3");
+
+        Assert::same($this->connection->readTimer("t1"), $t2 + $t3);
+        Assert::notSame(null, $this->connection->readTimer("t1"));
+        Assert::true($this->connection->readTimer("t1") > 0);
+    }
+
+    public function testTimerWithDefaultName() {
+        $this->connection->startTimer();
+
+        $this->connection->startTimer("t2");
+        $this->connection->executeQuery("SELECT * FROM [Contacts]");
+
+        $t2 = $this->connection->readTimer("t2");
+        Assert::same($this->connection->readTimer(), $t2);
+
+        $this->connection->startTimer("t3");
+        $this->connection->executeQuery("SELECT * FROM [Contacts]");
+        $t3 = $this->connection->readTimer("t3");
+
+        Assert::same($this->connection->readTimer(), $t2 + $t3);
+        Assert::notSame(null, $this->connection->readTimer());
+        Assert::true($this->connection->readTimer() > 0);
+    }
+
 }
 
 $testCase = new ConnectionTest();
