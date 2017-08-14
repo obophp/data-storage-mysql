@@ -285,7 +285,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 if ($lastInsertId) {
                     $data[$primaryPropertyColumnName] = $lastInsertId;
                 }
-                $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", $data);
+                $this->connection->executeQuery("INSERT INTO [{$storageName}].[{$repositoryName}] ", $data);
                 if (!$lastInsertId) {
                     $lastInsertId = $this->connection->getInsertId();
                 }
@@ -312,12 +312,12 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         foreach ($convertedData as $storageName => $storageData) {
             foreach ($storageData as $repositoryName => $data) {
-                $affectedRowsCount = $this->connection->query("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
+                $affectedRowsCount = $this->connection->executeQuery("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
                 if ($affectedRowsCount === 0) {
-                    $recordsCount = $this->connection->query("SELECT COUNT([{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}]) FROM [{$storageName}].[{$repositoryName}] WHERE [{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue())->fetchSingle();
+                    $recordsCount = $this->connection->executeQuery("SELECT COUNT([{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}]) FROM [{$storageName}].[{$repositoryName}] WHERE [{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue())->fetchSingle();
                     if ($recordsCount === 0) {
-                        $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$primaryPropertyColumnName => $entity->primaryPropertyValue()]);
-                        $this->connection->query("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
+                        $this->connection->executeQuery("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$primaryPropertyColumnName => $entity->primaryPropertyValue()]);
+                        $this->connection->executeQuery("UPDATE [{$storageName}].[{$repositoryName}] SET %a", $data, "WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder}", $entity->primaryPropertyValue());
                     }
                 }
             }
@@ -340,7 +340,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
 
         foreach ($informationForEntity["storages"] as $storageName => $storageData) {
             foreach ($storageData["repositories"] as $repositoryName => $data) {
-                $this->connection->query("DELETE FROM [{$storageName}].[{$repositoryName}] WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder} LIMIT 1", $entity->primaryPropertyValue());
+                $this->connection->executeQuery("DELETE FROM [{$storageName}].[{$repositoryName}] WHERE [{$storageName}].[{$repositoryName}].[{$primaryPropertyColumnName}] = {$primaryPropertyPlaceholder} LIMIT 1", $entity->primaryPropertyValue());
             }
         }
 
@@ -410,7 +410,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             }
         }
 
-        $this->connection->query("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$entities[0]->entityInformation()->repositoryName => $entities[0]->primaryPropertyValue(), $entities[1]->entityInformation()->repositoryName => $entities[1]->primaryPropertyValue()]);
+        $this->connection->executeQuery("INSERT INTO [{$storageName}].[{$repositoryName}] ", [$entities[0]->entityInformation()->repositoryName => $entities[0]->primaryPropertyValue(), $entities[1]->entityInformation()->repositoryName => $entities[1]->primaryPropertyValue()]);
     }
 
     /**
@@ -432,7 +432,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             }
         }
 
-        $this->connection->query("DELETE FROM [{$repositoryStorageName}].[{$repositoryRepositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = " . $this->informationForEntity($entities[1]->entityInformation())["storages"][$this->getStorageNameForEntity($entities[1]->entityInformation())]["repositories"][$entities[1]->entityInformation()->repositoryName]["columns"][$entities[1]->entityInformation()->informationForPropertyWithName($entities[1]->entityInformation()->primaryPropertyName)->columnName]["placeholder"], $entities[1]->primaryPropertyValue());
+        $this->connection->executeQuery("DELETE FROM [{$repositoryStorageName}].[{$repositoryRepositoryName}] WHERE [{$entities[0]->entityInformation()->repositoryName}] = {$entities[0]->primaryPropertyValue()} AND [{$entities[1]->entityInformation()->repositoryName}] = " . $this->informationForEntity($entities[1]->entityInformation())["storages"][$this->getStorageNameForEntity($entities[1]->entityInformation())]["repositories"][$entities[1]->entityInformation()->repositoryName]["columns"][$entities[1]->entityInformation()->informationForPropertyWithName($entities[1]->entityInformation()->primaryPropertyName)->columnName]["placeholder"], $entities[1]->primaryPropertyValue());
     }
 
     /**

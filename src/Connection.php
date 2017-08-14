@@ -30,6 +30,36 @@ class Connection extends \Dibi\Connection {
     const DATABASES_KEY = "databases";
 
     /**
+     * @var string
+     */
+    const ALL_QUERIES_TIMER_ENABLED_KEY = "allQueriesTimerEnabled";
+
+    /**
+     * @var string
+     */
+    const DEFAULT_TIMER_NAME = "__defaultTimer";
+
+    /**
+     * @var bool
+     */
+    protected $queriesTimerEnabled = false;
+
+    /**
+     * @var bool
+     */
+    protected $allQueriesTimerEnabled = false;
+
+    /**
+     * @var float
+     */
+    protected $queriesTime = 0;
+
+    /**
+     * @var array
+     */
+    protected $timers = [];
+
+    /**
      * Additional connection options:
      *   - defaultDatabase (string)
      *   - databases (associative array of string) e.g. databaseAlias => databaseName
@@ -67,6 +97,10 @@ class Connection extends \Dibi\Connection {
             throw new \InvalidArgumentException(\sprintf('Configuration for default database with name %s does not exists.', $config[static::DEFAULT_DATABASE_KEY]));
         }
 
+        if (isset($config[static::ALL_QUERIES_TIMER_ENABLED_KEY])) {
+            $this->allQueriesTimerEnabled = $config[static::ALL_QUERIES_TIMER_ENABLED_KEY];
+        }
+
         $this->databases = $config[static::DATABASES_KEY];
         $this->defaultDatabase = $this->getStorageNameByAlias($config[static::DEFAULT_DATABASE_KEY]);
 
@@ -74,6 +108,32 @@ class Connection extends \Dibi\Connection {
         unset($config[static::DEFAULT_DATABASE_KEY]);
         $config[static::DATABASE_KEY] = $this->defaultDatabase;
         parent::__construct($config, $name);
+    }
+
+    /**
+     * @return float
+     */
+    public function getTotalTime() {
+        return $this->allQueriesTimerEnabled ? $this->queriesTime : null;
+    }
+
+    /**
+     * @param string $timerName
+     * @return void
+     */
+    public function startTimer($timerName = null) {
+        $this->queriesTimerEnabled = true;
+        if ($timerName === null) $timerName = self::DEFAULT_TIMER_NAME;
+        $this->timers[$timerName] = $this->queriesTime;
+    }
+
+    /**
+     * @param string $timerName
+     * @return float
+     */
+    public function readTimer($timerName = null) {
+        if ($timerName === null) $timerName = self::DEFAULT_TIMER_NAME;
+        return isset($this->timers[$timerName]) ? $this->queriesTime - $this->timers[$timerName] : null;
     }
 
     /**
@@ -129,6 +189,74 @@ class Connection extends \Dibi\Connection {
         $this->switchToStorageWithAlias($storageAlias);
         parent::loadFile($filename);
         $this->switchToDefaultStorage();
+    }
+
+    /**
+     * @param  array|mixed
+     * @return \Dibi\Result|int   result set object (if any)
+     */
+    public function executeQuery($args) {
+        $args = func_get_args();
+
+        if ($this->queriesTimerEnabled) {
+            $this->queriesTime -= microtime(true);
+            $result = parent::query($args);
+            $this->queriesTime += microtime(true);
+            return $result;
+        }
+
+        return parent::query($args);
+    }
+
+    /**
+     * @param  array|mixed
+     * @return \Dibi\Row|bool
+     */
+    public function fetch($args) {
+        $args = func_get_args();
+
+        if ($this->queriesTimerEnabled) {
+            $this->queriesTime -= microtime(true);
+            $result = parent::fetch($args);
+            $this->queriesTime += microtime(true);
+            return $result;
+        }
+
+        return parent::fetch($args);
+    }
+
+    /**
+     * @param  array|mixed
+     * @return \Dibi\Row[]
+     */
+    public function fetchAll($args) {
+        $args = func_get_args();
+
+        if ($this->queriesTimerEnabled) {
+            $this->queriesTime -= microtime(true);
+            $result = parent::fetchAll($args);
+            $this->queriesTime += microtime(true);
+            return $result;
+        }
+
+        return parent::fetchAll($args);
+    }
+
+    /**
+     * @param  array|mixed
+     * @return string|bool
+     */
+    public function fetchSingle($args) {
+        $args = func_get_args();
+
+        if ($this->queriesTimerEnabled) {
+            $this->queriesTime += -microtime(true);
+            $result = parent::fetchSingle($args);
+            $this->queriesTime += microtime(true);
+            return $result;
+        }
+
+        return parent::fetchSingle($args);
     }
 
 }
