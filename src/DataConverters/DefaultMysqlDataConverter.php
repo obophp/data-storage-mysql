@@ -202,19 +202,20 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
                 return "dateTimeToString";
             case "Dtimestamp->OdateTime":
                 return "timeStampToDateTime";
-            case "Dchar->Oarray":
             case "Dchar->Oobject":
-            case "Dvarchar->Oarray":
             case "Dvarchar->Oobject":
-            case "Dtinytext->Oarray":
             case "Dtinytext->Oobject":
-            case "Dtext->Oarray":
             case "Dtext->Oobject":
-            case "Dmediumtext->Oarray":
             case "Dmediumtext->Oobject":
-            case "Dlongtext->Oarray":
             case "Dlongtext->Oobject":
-                return "deserialize";
+                return "deserializeToObject";
+            case "Dchar->Oarray":
+            case "Dvarchar->Oarray":
+            case "Dtinytext->Oarray":
+            case "Dtext->Oarray":
+            case "Dmediumtext->Oarray":
+            case "Dlongtext->Oarray":
+                return "deserializeToArray";
             case "Dchar->OdateTime":
             case "Dvarchar->OdateTime":
             case "Ostring->Ddate":
@@ -225,19 +226,20 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
                 return "stringToDateTime";
             case "Dset->Oarray":
                 return "toArray";
-            case "Oarray->Dchar":
-            case "Oarray->Dvarchar":
-            case "Oarray->Dtinytext":
-            case "Oarray->Dtext":
-            case "Oarray->Dmediumtext":
-            case "Oarray->Dlongtext":
             case "Oobject->Dchar":
             case "Oobject->Dvarchar":
             case "Oobject->Dtinytext":
             case "Oobject->Dtext":
             case "Oobject->Dmediumtext":
             case "Oobject->Dlongtext":
-                return "serialize";
+                return "serializeObject";
+            case "Oarray->Dchar":
+            case "Oarray->Dvarchar":
+            case "Oarray->Dtinytext":
+            case "Oarray->Dtext":
+            case "Oarray->Dmediumtext":
+            case "Oarray->Dlongtext":
+                return "serializeArray";
             case "OdateTime->Dtimestamp":
                 return "dateTimeToTimestamp";
 
@@ -287,19 +289,41 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
     }
 
     /**
-     * @param mixed $value
+     * @param object $value
      * @return string
      */
-    public static function serialize($value) {
+    public static function serializeObject($value) {
         return \serialize($value);
     }
 
     /**
-     * @param mixed $value
-     * @return mixed
+     * @param string $value
+     * @return null|object
+     * @throws \obo\Exceptions\Exception
      */
-    public static function deserialize($value) {
-        return \unserialize($value);
+    public static function deserializeToObject($value) {
+        $unserializedValue = ($value === null OR $value === "") ? null : \unserialize($value);
+        if ($value && $unserializedValue === false) throw new \obo\Exceptions\Exception("Wrong data source for deserialization");
+        return $unserializedValue;
+    }
+
+    /**
+     * @param array $value
+     * @return string
+     */
+    public static function serializeArray(array $value) {
+        return \serialize($value);
+    }
+
+    /**
+     * @param string $value
+     * @return array
+     * @throws \obo\Exceptions\Exception
+     */
+    public static function deserializeToArray($value) {
+        $unserializedValue = ($value === null OR $value === "") ? [] : \unserialize($value);
+        if ($value && $unserializedValue === false) throw new \obo\Exceptions\Exception("Wrong data source for deserialization");
+        return $unserializedValue;
     }
 
     /**
