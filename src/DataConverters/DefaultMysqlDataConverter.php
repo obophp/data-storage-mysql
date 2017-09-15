@@ -323,7 +323,7 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
      * @throws \obo\Exceptions\Exception
      */
     public static function deserializeToArray($value, \obo\Carriers\PropertyInformationCarrier $propertyInformation) {
-        $unserializedValue = ($value === null OR $value === "") ? [] : \unserialize($value);
+        $unserializedValue = ($value === null OR $value === "") ? ($propertyInformation->nullable ? null : []) : \unserialize($value);
         if ($value && $unserializedValue === false) throw new \obo\Exceptions\Exception("Wrong data source for deserialization");
         return $unserializedValue;
     }
