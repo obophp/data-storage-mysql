@@ -266,7 +266,7 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
 
     /**
      * @param mixed $value
-     * @return boolean
+     * @return bool
      */
     public static function toBoolean($value) {
         return (boolean) $value;
@@ -274,7 +274,7 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
 
     /**
      * @param mixed $value
-     * @return integer
+     * @return int
      */
     public static function toInteger($value) {
         return (integer) $value;
@@ -298,10 +298,11 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
 
     /**
      * @param string $value
+     * @param \obo\Carriers\PropertyInformationCarrier $propertyInformation
      * @return null|object
      * @throws \obo\Exceptions\Exception
      */
-    public static function deserializeToObject($value) {
+    public static function deserializeToObject($value, \obo\Carriers\PropertyInformationCarrier $propertyInformation) {
         $unserializedValue = ($value === null OR $value === "") ? null : \unserialize($value);
         if ($value && $unserializedValue === false) throw new \obo\Exceptions\Exception("Wrong data source for deserialization");
         return $unserializedValue;
@@ -317,10 +318,11 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
 
     /**
      * @param string $value
+     * @param \obo\Carriers\PropertyInformationCarrier $propertyInformation
      * @return array
      * @throws \obo\Exceptions\Exception
      */
-    public static function deserializeToArray($value) {
+    public static function deserializeToArray($value, \obo\Carriers\PropertyInformationCarrier $propertyInformation) {
         $unserializedValue = ($value === null OR $value === "") ? [] : \unserialize($value);
         if ($value && $unserializedValue === false) throw new \obo\Exceptions\Exception("Wrong data source for deserialization");
         return $unserializedValue;
@@ -354,7 +356,7 @@ class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\
 
     /**
      * @param \DateTime $value
-     * @return integer
+     * @return int
      */
     public static function dateTimeToTimestamp(\DateTime $value) {
         return $value->getTimestamp();

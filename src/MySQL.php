@@ -572,7 +572,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
                 $storageInformation = &$information["storages"][$propertyStorageName];
                 $propertyRepositoryName = $propertyInformation->repositoryName ?: $defaultEntityInformation->repositoryName;
                 $propertyInformationArray = $storageInformation["repositories"][$propertyRepositoryName]["columns"][$storageInformation["repositories"][$propertyRepositoryName]["toColumnName"][$property]];
-                $convertedRow[$columnName] = ($propertyInformationArray["exportFilter"] === null OR ($columnValue === null AND $propertyInformationArray["nullable"])) ? $columnValue : $this->dataConverter->{$propertyInformationArray["exportFilter"]}($columnValue);
+                $convertedRow[$columnName] = ($propertyInformationArray["exportFilter"] === null OR ($columnValue === null AND $propertyInformationArray["nullable"])) ? $columnValue : $this->dataConverter->{$propertyInformationArray["exportFilter"]}($columnValue, $propertyInformation);
                 $defaultEntityInformation = $entityInformation;
             }
 
@@ -604,7 +604,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
             $entityInformationForPropertyRepositoryName = &$storageInformation["repositories"][$propertyRepositoryName];
 
             if ($entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["autoIncrement"]) continue;
-            $convertedData[$propertyStorageName][$propertyRepositoryName][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]] = ($entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"] === null OR $propertyValue === null) ? $propertyValue : $this->dataConverter->{$entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"]}($propertyValue);
+            $convertedData[$propertyStorageName][$propertyRepositoryName][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]] = ($entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"] === null OR $propertyValue === null) ? $propertyValue : $this->dataConverter->{$entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"]}($propertyValue, $propertyInformation);
         }
 
         return $convertedData;
