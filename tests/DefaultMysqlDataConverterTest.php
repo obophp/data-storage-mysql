@@ -16,9 +16,16 @@ class DataConverterTest extends \Tester\TestCase {
      */
     public $propertyInformation;
 
+    /**
+     * @var \obo\Carriers\PropertyInformationCarrier
+     */
+    public $propertyInformationWithNullable;
+
     public function setUp() {
         parent::setUp();
         $this->propertyInformation = new \obo\Carriers\PropertyInformationCarrier();
+        $this->propertyInformationWithNullable = new \obo\Carriers\PropertyInformationCarrier();
+        $this->propertyInformationWithNullable->nullable = true;
     }
 
     public function testDeserializeArray() {
@@ -29,6 +36,10 @@ class DataConverterTest extends \Tester\TestCase {
         Assert::equal([], $dataConverter::deserializeToArray("", $this->propertyInformation));
 
         Assert::equal([], $dataConverter::deserializeToArray(null, $this->propertyInformation));
+
+        Assert::equal(null, $dataConverter::deserializeToArray("", $this->propertyInformationWithNullable));
+
+        Assert::equal(null, $dataConverter::deserializeToArray(null, $this->propertyInformationWithNullable));
 
         $propertyInformation = $this->propertyInformation;
         Assert::exception(function () use ($dataConverter, $propertyInformation) {
