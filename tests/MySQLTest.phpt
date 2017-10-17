@@ -336,14 +336,18 @@ class MySQLTest extends \Tester\TestCase {
      * @todo Implement test for this method
      */
     public function testCountEntitiesInRelationship() {
-
+        Assert::equal(2, $this->countRelationshipBetweenContactAndAddress());
     }
 
     /**
      * @todo Implement test for this method
      */
     public function testDataForEntitiesInRelationship() {
-
+        $queryCarrier = $this->createContactQueryCarrier();
+        $owner = $this->getContactEntity();
+        $targetEntity = $this->getAddressEntity();
+        $actualData = $this->storage->dataForEntitiesInRelationship($queryCarrier, static::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, $owner, $targetEntity);
+        Assert::equal(static::$expectedDataForQuery, $actualData);
     }
 
     public function testCreateRelationshipBetweenEntities() {
@@ -424,7 +428,7 @@ class MySQLTest extends \Tester\TestCase {
 
         $file = __DIR__ . DIRECTORY_SEPARATOR . static::TEST_FILE_PATH;
         file_put_contents($file, $data, FILE_APPEND);
-        }
+    }
 
     public function __destruct() {
         $file = __DIR__ . DIRECTORY_SEPARATOR . static::TEST_FILE_PATH;
