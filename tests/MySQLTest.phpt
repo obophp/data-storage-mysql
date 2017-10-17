@@ -285,6 +285,11 @@ class MySQLTest extends \Tester\TestCase {
         $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`t1`.`id` AS `address_id`, `obo-test2`.`t1`.`owner` AS `address_owner`, `obo-test2`.`t1`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`t1`.`street` AS `address_street`, `obo-test2`.`t1`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`t1`.`town` AS `address_town`, `obo-test2`.`t1`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t1` ON `obo-test`.`Contacts`.`address` = `t1`.`id` /** t1 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */  WHERE `obo-test`.`Contacts`.`email` = 'test@example.com' AND ( `obo-test`.`Contacts`.`id` = 1 OR `obo-test`.`Contacts`.`id` = 2 OR `obo-test`.`Contacts`.`id` = 3 ) AND `obo-test`.`Contacts`.`address` = 4";
         $actualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($expectedQuery, $actualQuery);
+
+        $queryCarrier->distinct();
+        $expectedQuery = substr_replace($expectedQuery, " DISTINCT",strlen("SELECT"),0);
+        $actualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $actualQuery);
     }
 
     public function testDataForQuery() {
