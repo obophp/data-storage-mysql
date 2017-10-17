@@ -176,7 +176,7 @@ class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
         $data = [];
         $queryCarrier = clone $queryCarrier;
         $joins = [];
-        $needDistinct = false;
+        $needDistinct = $queryCarrier->getDistinct();
 
         $entityInformation = $queryCarrier->getDefaultEntityEntityInformation();
         $storageName = $this->getStorageNameForEntity($entityInformation);
