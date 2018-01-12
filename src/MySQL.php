@@ -10,7 +10,7 @@
 
 namespace obo\DataStorage;
 
-class MySQL extends \obo\Object implements \obo\Interfaces\IDataStorage {
+class MySQL extends \obo\BaseObject implements \obo\Interfaces\IDataStorage {
 
     const PROCESS_SELECT = "select";
     const PROCESS_WHERE = "where";
