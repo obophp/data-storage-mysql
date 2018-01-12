@@ -10,7 +10,7 @@
 
 namespace obo\DataStorage\DataConverters;
 
-class DefaultMysqlDataConverter extends \obo\Object implements \obo\DataStorage\Interfaces\IDataConverter {
+class DefaultMysqlDataConverter extends \obo\BaseObject implements \obo\DataStorage\Interfaces\IDataConverter {
 
     /**
      * @param string $combinationCode
