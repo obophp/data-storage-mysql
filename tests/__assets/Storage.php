@@ -42,6 +42,7 @@ class Storage {
         if (static::$connection === null) {
             static::$connection = new \obo\DataStorage\Connection(static::$config);
         }
+
         return static::$connection;
     }
 
@@ -52,6 +53,7 @@ class Storage {
         if (static::$dataStorage === null) {
             static::$dataStorage = new \obo\DataStorage\MySQL(static::getConnection(), new \obo\DataStorage\DataConverters\DefaultMysqlDataConverter());
         }
+
         return static::$dataStorage;
     }
 

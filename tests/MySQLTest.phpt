@@ -172,6 +172,7 @@ class MySQLTest extends \Tester\TestCase {
     protected function createContactQueryCarrier() {
         $queryCarrier = new \obo\Carriers\QueryCarrier();
         $queryCarrier->setDefaultEntityClassName(Assets\Entities\Contact::class);
+
         return $queryCarrier->select(Assets\Entities\ContactManager::constructSelect());
     }
 
@@ -181,6 +182,7 @@ class MySQLTest extends \Tester\TestCase {
     protected function createPersonalContactQueryCarrier() {
         $queryCarrier = new \obo\Carriers\QueryCarrier();
         $queryCarrier->setDefaultEntityClassName(Assets\Entities\Contact\Personal::class);
+
         return $queryCarrier->select(Assets\Entities\Contact\PersonalManager::constructSelect());
     }
 
@@ -190,6 +192,7 @@ class MySQLTest extends \Tester\TestCase {
     protected function createAddressQueryCarrier() {
         $queryCarrier = new \obo\Carriers\QueryCarrier();
         $queryCarrier->setDefaultEntityClassName(Assets\Entities\Address::class);
+
         return $queryCarrier->select(Assets\Entities\AddressManager::constructSelect());
     }
 
@@ -199,9 +202,11 @@ class MySQLTest extends \Tester\TestCase {
      */
     protected function createContactEntity($save = true) {
         $entity = Assets\Entities\ContactManager::entityFromArray(static::$contactData);
+
         if ($save) {
             $entity->save();
         }
+
         return $entity;
     }
 
@@ -211,9 +216,11 @@ class MySQLTest extends \Tester\TestCase {
      */
     protected function createAddressEntity($save = true) {
         $entity = Assets\Entities\AddressManager::entityFromArray(static::$addressData);
+
         if ($save) {
             $entity->save();
         }
+
         return $entity;
     }
 
@@ -262,6 +269,7 @@ class MySQLTest extends \Tester\TestCase {
      */
     protected function countEntitiesInRelationship($repositoryName, \obo\Entity $ownerEntity) {
         $repositoryName = "[" . str_replace(".", "].[", $repositoryName) . "]";
+
         return (int)$this->connection->select("COUNT(*)")->from($repositoryName)->where($ownerEntity::entityInformation()->repositoryName . " = %i", $ownerEntity->primaryPropertyValue())->fetchSingle();
     }
 
@@ -273,16 +281,62 @@ class MySQLTest extends \Tester\TestCase {
         return $this->countEntitiesInRelationship(self::RELATIONSHIP_BETWEEN_CONTACT_AND_ADDRESS_REPOSITORY, $this->getContactEntity($contactId));
     }
 
-    public function testConstructQuery() {
+    public function testConstructQueryNormalMode() {
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => true,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => true,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => false
+        ]);
         $queryCarrier = $this->createContactQueryCarrier();
-        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`t1`.`id` AS `address_id`, `obo-test2`.`t1`.`owner` AS `address_owner`, `obo-test2`.`t1`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`t1`.`street` AS `address_street`, `obo-test2`.`t1`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`t1`.`town` AS `address_town`, `obo-test2`.`t1`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t1` ON `obo-test`.`Contacts`.`address` = `t1`.`id` /** t1 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */ ";
+        $expectedQuery = "SELECT  `t0`.`id` AS `c0`, `t0`.`email` AS `c1`, `t0`.`phone` AS `c2`, `t1`.`fax` AS `c3`, `t0`.`address` AS `c4`, `t2`.`id` AS `c5`, `t2`.`owner` AS `c6`, `t2`.`ownerEntity` AS `c7`, `t2`.`street` AS `c8`, `t2`.`houseNumber` AS `c9`, `t2`.`town` AS `c10`, `t2`.`postalCode` AS `c11` FROM `obo-test`.`Contacts` `t0` INNER JOIN `obo-test2`.`Contacts` AS `t1` ON `t1`.`id` = `t0`.`id` LEFT JOIN `obo-test2`.`Address` AS `t2` ON `t0`.`address` = `t2`.`id`";
         $firstActualQuery = $this->storage->constructQuery($queryCarrier);
         $secondActualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($expectedQuery, $firstActualQuery);
         Assert::equal($expectedQuery, $secondActualQuery);
 
         $queryCarrier->where("AND {email} = ? AND ( {id} = ? OR {id} = ? OR {id} = ? ) AND {address} = ?", "test@example.com", 1 , 2 , 3 , 4);
-        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `obo-test2`.`t1`.`id` AS `address_id`, `obo-test2`.`t1`.`owner` AS `address_owner`, `obo-test2`.`t1`.`ownerEntity` AS `address_ownerEntity`, `obo-test2`.`t1`.`street` AS `address_street`, `obo-test2`.`t1`.`houseNumber` AS `address_houseNumber`, `obo-test2`.`t1`.`town` AS `address_town`, `obo-test2`.`t1`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t1` ON `obo-test`.`Contacts`.`address` = `t1`.`id` /** t1 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */  WHERE `obo-test`.`Contacts`.`email` = 'test@example.com' AND ( `obo-test`.`Contacts`.`id` = 1 OR `obo-test`.`Contacts`.`id` = 2 OR `obo-test`.`Contacts`.`id` = 3 ) AND `obo-test`.`Contacts`.`address` = 4";
+        $expectedQuery = "SELECT  `t0`.`id` AS `c0`, `t0`.`email` AS `c1`, `t0`.`phone` AS `c2`, `t1`.`fax` AS `c3`, `t0`.`address` AS `c4`, `t2`.`id` AS `c5`, `t2`.`owner` AS `c6`, `t2`.`ownerEntity` AS `c7`, `t2`.`street` AS `c8`, `t2`.`houseNumber` AS `c9`, `t2`.`town` AS `c10`, `t2`.`postalCode` AS `c11` FROM `obo-test`.`Contacts` `t0` INNER JOIN `obo-test2`.`Contacts` AS `t1` ON `t1`.`id` = `t0`.`id` LEFT JOIN `obo-test2`.`Address` AS `t2` ON `t0`.`address` = `t2`.`id` WHERE `t0`.`email` = 'test@example.com' AND ( `t0`.`id` = 1 OR `t0`.`id` = 2 OR `t0`.`id` = 3 ) AND `t0`.`address` = 4";
+        $actualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $actualQuery);
+
+        $queryCarrier = $this->createPersonalContactQueryCarrier();
+        $expectedQuery = "SELECT  `t1`.`id` AS `c0`, `t0`.`firstname` AS `c1`, `t0`.`surname` AS `c2`, `t1`.`email` AS `c3`, `t1`.`phone` AS `c4`, `t2`.`fax` AS `c5`, `t1`.`address` AS `c6`, `t3`.`id` AS `c7`, `t3`.`owner` AS `c8`, `t3`.`ownerEntity` AS `c9`, `t3`.`street` AS `c10`, `t3`.`houseNumber` AS `c11`, `t3`.`town` AS `c12`, `t3`.`postalCode` AS `c13` FROM `obo-test`.`PersonalContacts` `t0` INNER JOIN `obo-test2`.`Contacts` AS `t2` ON `t2`.`id` = `t0`.`id`  INNER JOIN `obo-test`.`Contacts` AS `t1` ON `t1`.`id` = `t0`.`id` LEFT JOIN `obo-test2`.`Address` AS `t3` ON `t1`.`address` = `t3`.`id`";
+        $actualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $actualQuery);
+
+        $queryCarrier = $this->createPersonalContactQueryCarrier();
+        $queryCarrier->where("{otherAddresses}.{town} = ?","Arcata");
+        $expectedQuery = "SELECT DISTINCT  `t1`.`id` AS `c0`, `t0`.`firstname` AS `c1`, `t0`.`surname` AS `c2`, `t1`.`email` AS `c3`, `t1`.`phone` AS `c4`, `t2`.`fax` AS `c5`, `t1`.`address` AS `c6`, `t3`.`id` AS `c7`, `t3`.`owner` AS `c8`, `t3`.`ownerEntity` AS `c9`, `t3`.`street` AS `c10`, `t3`.`houseNumber` AS `c11`, `t3`.`town` AS `c12`, `t3`.`postalCode` AS `c13` FROM `obo-test`.`PersonalContacts` `t0` INNER JOIN `obo-test2`.`Contacts` AS `t2` ON `t2`.`id` = `t0`.`id`  INNER JOIN `obo-test`.`Contacts` AS `t1` ON `t1`.`id` = `t0`.`id` LEFT JOIN `obo-test2`.`Address` AS `t3` ON `t1`.`address` = `t3`.`id` LEFT JOIN `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`
+                ON `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`.`Contacts`
+                = `t1`.`id`
+                LEFT JOIN `obo-test2`.`Address` AS `t6`
+                ON `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`.`Address`
+                = `t6`.`id` WHERE  `t6`.`town` = 'Arcata'";
+        $actualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $actualQuery);
+
+    }
+
+    public function testConstructQueryDeveloperMode() {
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => false,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => false,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => true
+        ]);
+        $queryCarrier = $this->createContactQueryCarrier();
+        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `t2`.`id` AS `address_id`, `t2`.`owner` AS `address_owner`, `t2`.`ownerEntity` AS `address_ownerEntity`, `t2`.`street` AS `address_street`, `t2`.`houseNumber` AS `address_houseNumber`, `t2`.`town` AS `address_town`, `t2`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t2` ON `obo-test`.`Contacts`.`address` = `t2`.`id` /** t2 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */ ";
+        $firstActualQuery = $this->storage->constructQuery($queryCarrier);
+        $secondActualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $firstActualQuery);
+        Assert::equal($expectedQuery, $secondActualQuery);
+
+        $queryCarrier->where("AND {email} = ? AND ( {id} = ? OR {id} = ? OR {id} = ? ) AND {address} = ?", "test@example.com", 1 , 2 , 3 , 4);
+        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `t2`.`id` AS `address_id`, `t2`.`owner` AS `address_owner`, `t2`.`ownerEntity` AS `address_ownerEntity`, `t2`.`street` AS `address_street`, `t2`.`houseNumber` AS `address_houseNumber`, `t2`.`town` AS `address_town`, `t2`.`postalCode` AS `address_postalCode` FROM `obo-test`.`Contacts` INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`Contacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t2` ON `obo-test`.`Contacts`.`address` = `t2`.`id` /** t2 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */  WHERE `obo-test`.`Contacts`.`email` = 'test@example.com' AND ( `obo-test`.`Contacts`.`id` = 1 OR `obo-test`.`Contacts`.`id` = 2 OR `obo-test`.`Contacts`.`id` = 3 ) AND `obo-test`.`Contacts`.`address` = 4";
+        $actualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $actualQuery);
+
+        $queryCarrier = $this->createPersonalContactQueryCarrier();
+        $expectedQuery = "SELECT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`PersonalContacts`.`firstname` AS `firstname`, `obo-test`.`PersonalContacts`.`surname` AS `surname`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `t3`.`id` AS `address_id`, `t3`.`owner` AS `address_owner`, `t3`.`ownerEntity` AS `address_ownerEntity`, `t3`.`street` AS `address_street`, `t3`.`houseNumber` AS `address_houseNumber`, `t3`.`town` AS `address_town`, `t3`.`postalCode` AS `address_postalCode` FROM `obo-test`.`PersonalContacts` INNER JOIN `obo-test`.`Contacts` ON `obo-test`.`Contacts`.`id` = `obo-test`.`PersonalContacts`.`id`  INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`PersonalContacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t3` ON `obo-test`.`Contacts`.`address` = `t3`.`id` /** t3 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */ ";
         $actualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($expectedQuery, $actualQuery);
 
@@ -290,15 +344,58 @@ class MySQLTest extends \Tester\TestCase {
         $expectedQuery = substr_replace($expectedQuery, " DISTINCT",strlen("SELECT"),0);
         $actualQuery = $this->storage->constructQuery($queryCarrier);
         Assert::equal($expectedQuery, $actualQuery);
+
+        $queryCarrier = $this->createPersonalContactQueryCarrier();
+        $queryCarrier->where("{otherAddresses}.{town} = ?","Arcata");
+        
+        $expectedQuery = "SELECT DISTINCT  `obo-test`.`Contacts`.`id` AS `id`, `obo-test`.`PersonalContacts`.`firstname` AS `firstname`, `obo-test`.`PersonalContacts`.`surname` AS `surname`, `obo-test`.`Contacts`.`email` AS `email`, `obo-test`.`Contacts`.`phone` AS `phone`, `obo-test2`.`Contacts`.`fax` AS `fax`, `obo-test`.`Contacts`.`address` AS `address`, `t3`.`id` AS `address_id`, `t3`.`owner` AS `address_owner`, `t3`.`ownerEntity` AS `address_ownerEntity`, `t3`.`street` AS `address_street`, `t3`.`houseNumber` AS `address_houseNumber`, `t3`.`town` AS `address_town`, `t3`.`postalCode` AS `address_postalCode` FROM `obo-test`.`PersonalContacts` INNER JOIN `obo-test`.`Contacts` ON `obo-test`.`Contacts`.`id` = `obo-test`.`PersonalContacts`.`id`  INNER JOIN `obo-test2`.`Contacts` ON `obo-test2`.`Contacts`.`id` = `obo-test`.`PersonalContacts`.`id` LEFT JOIN `obo-test2`.`Address` AS `t3` ON `obo-test`.`Contacts`.`address` = `t3`.`id` /** t3 => obo-test:Contacts:address->LEFT_JOIN->obo-test2:Address:id */  LEFT JOIN `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`
+                ON `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`.`Contacts`
+                = `obo-test`.`Contacts`.`id`
+                LEFT JOIN `obo-test2`.`Address` AS `t6`
+                ON `obo-test2`.`RelationshipBetweenContactAndOtherAddresses`.`Address`
+                = `t6`.`id` /** t6 => obo-test2:RelationshipBetweenContactAndOtherAddresses:Address->LEFT_JOIN->obo-test2:Address:id->LEFT_JOIN->obo-test2:RelationshipBetweenContactAndOtherAddresses:Contacts->LEFT_JOIN->obo-test:Contacts:id */  WHERE  `t6`.`town` = 'Arcata'";
+        $actualQuery = $this->storage->constructQuery($queryCarrier);
+        Assert::equal($expectedQuery, $actualQuery);
+
     }
 
     public function testDataForQuery() {
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => true,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => true,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => false
+        ]);
+        $this->doDataForQuery();
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => false,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => false,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => true
+        ]);
+        $this->doDataForQuery();
+    }
+
+    public function doDataForQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
         $actualData = $this->storage->dataForQuery($queryCarrier);
         Assert::equal(self::$expectedDataForQuery, $actualData);
     }
 
     public function testCountRecordsForQuery() {
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => true,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => true,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => false
+        ]);
+        $this->doCountRecordsForQuery();
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => false,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => false,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => true
+        ]);
+        $this->doCountRecordsForQuery();
+    }
+
+    public function doCountRecordsForQuery() {
         $queryCarrier = $this->createContactQueryCarrier();
         Assert::equal($this->storage->countRecordsForQuery($queryCarrier), 5);
     }
@@ -381,11 +478,28 @@ class MySQLTest extends \Tester\TestCase {
     }
 
     public function testSelectEntities() {
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => true,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => true,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => false
+        ]);
+        $this->doSelectEntities();
+        $this->storage->setConfiguration([
+            \obo\DataStorage\MySQL::ALIAS_TABLES => false,
+            \obo\DataStorage\MySQL::SHORT_COLUMN_NAMES => false,
+            \obo\DataStorage\MySQL::COMMENT_JOINS => true
+        ]);
+        $this->doSelectEntities();
+    }
+
+    public function doSelectEntities() {
         $contact = $this->getContactEntity();
         $addresses = $contact->otherAddresses->asArray();
+
         foreach ($addresses as $address) {
             Assert::type(Assets\Entities\Address::class, $address);
             Assert::type(Assets\Entities\Contact\Personal::class, $address->owner);
+
             foreach ($address->defaultContacts as $contact) {
                 Assert::type(Assets\Entities\Contact::class, $contact);
             }
@@ -421,15 +535,15 @@ class MySQLTest extends \Tester\TestCase {
 
     public function tearDown() {
         parent::tearDown();
-
         $data = [];
+
         foreach ($this->queryLog as $record) {
             $data = $record . "\n";
         }
 
         $file = __DIR__ . DIRECTORY_SEPARATOR . static::TEST_FILE_PATH;
         file_put_contents($file, $data, FILE_APPEND);
-        }
+    }
 
     public function __destruct() {
         $file = __DIR__ . DIRECTORY_SEPARATOR . static::TEST_FILE_PATH;
