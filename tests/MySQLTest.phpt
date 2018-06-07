@@ -32,6 +32,12 @@ class MySQLTest extends \Tester\TestCase {
         "fax" => "+420987654321",
     ];
 
+    private static $businessContactData = [
+        "email" => "business@mail.com",
+        "phone" => "+420159753456",
+        "companyName" => " Work s.r.o",
+    ];
+
     private static $addressData = [
         "owner" => 1,
         "ownerEntity" => "PersonalContact",
@@ -130,6 +136,11 @@ class MySQLTest extends \Tester\TestCase {
     /**
      * @var string
      */
+    const BUSINESS_CONTACTS_REPOSITORY = "obo-test.BusinessContacts";
+
+    /**
+     * @var string
+     */
     const CONTACTS_REPOSITORY_ADDRESS = "[obo-test].[Contacts]";
 
     /**
@@ -206,6 +217,17 @@ class MySQLTest extends \Tester\TestCase {
         if ($save) {
             $entity->save();
         }
+
+        return $entity;
+    }
+
+    /**
+     * @param bool $save
+     * @return \obo\DataStorage\Tests\Assets\Entities\Contact
+     */
+    protected function createBusinessContactEntity($save = true) {
+        $entity = Assets\Entities\Contact\BusinessManager::entityFromArray(static::$businessContactData);
+        if ($save) $entity->save();
 
         return $entity;
     }
@@ -406,6 +428,25 @@ class MySQLTest extends \Tester\TestCase {
         $entity->save();
 
         $selectedEntity = $this->selectEntity(static::CONTACTS_REPOSITORY, $entity->primaryPropertyValue());
+        Assert::true($selectedEntity !== FALSE, "Contact entity with ID " . $entity->primaryPropertyValue() . "should be inserted in database");
+
+        Assert::exception(
+            function () use ($entity) {
+                $this->storage->insertEntity($entity);
+            },
+            \obo\Exceptions\Exception::class
+        );
+    }
+
+    public function testInsertExtendedEntity() {
+        $entity = $this->createBusinessContactEntity(false);
+        $this->storage->insertEntity($entity);
+        $entity->save();
+
+        $selectedEntity = $this->selectEntity(static::CONTACTS_REPOSITORY, $entity->primaryPropertyValue());
+        Assert::true($selectedEntity !== FALSE, "Contact entity with ID " . $entity->primaryPropertyValue() . "should be inserted in database");
+
+        $selectedEntity = $this->selectEntity(static::BUSINESS_CONTACTS_REPOSITORY, $entity->primaryPropertyValue());
         Assert::true($selectedEntity !== FALSE, "Contact entity with ID " . $entity->primaryPropertyValue() . "should be inserted in database");
 
         Assert::exception(

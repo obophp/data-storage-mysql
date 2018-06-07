@@ -665,7 +665,7 @@ class MySQL extends \obo\BaseObject implements \obo\Interfaces\IDataStorage {
      * @return array
      */
     protected function convertDataForImport(array $data, \obo\Carriers\EntityInformationCarrier $entityInformation) {
-        $convertedData = [];
+        $convertedDataTemporary = [];
         $information = $this->informationForEntity($entityInformation);
 
         foreach ($data as $propertyName => $propertyValue) {
@@ -676,7 +676,22 @@ class MySQL extends \obo\BaseObject implements \obo\Interfaces\IDataStorage {
             $entityInformationForPropertyRepositoryName = &$storageInformation["repositories"][$propertyRepositoryName];
 
             if ($entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["autoIncrement"]) continue;
-            $convertedData[$propertyStorageName][$propertyRepositoryName][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]] = ($entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"] === null OR $propertyValue === null) ? $propertyValue : $this->dataConverter->{$entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"]}($propertyValue, $propertyInformation);
+            $convertedDataTemporary[$propertyStorageName][$propertyRepositoryName][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]] = ($entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"] === null OR $propertyValue === null) ? $propertyValue : $this->dataConverter->{$entityInformationForPropertyRepositoryName["columns"][$entityInformationForPropertyRepositoryName["toColumnName"][$propertyName]]["importFilter"]}($propertyValue, $propertyInformation);
+        }
+
+        $convertedData = [];
+        $primaryPropertyRepositoryName = $entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName)->repositoryName ?: $entityInformation->repositoryName;
+        $primaryPropertyStorageName = $this->getStorageNameForProperty($entityInformation->informationForPropertyWithName($entityInformation->primaryPropertyName));
+
+        $convertedData[$primaryPropertyStorageName] = [$primaryPropertyRepositoryName => $convertedDataTemporary[$primaryPropertyStorageName][$primaryPropertyRepositoryName]];
+        unset($convertedDataTemporary[$primaryPropertyStorageName][$primaryPropertyRepositoryName]);
+
+        foreach ($convertedDataTemporary as $storageName => $storageData) {
+            if (!isset($convertedData[$storageName])) $convertedData[$storageName] = [];
+
+            foreach ($storageData as $repositoryName => $data) {
+                $convertedData[$storageName][$repositoryName] = $data;
+            }
         }
 
         return $convertedData;
